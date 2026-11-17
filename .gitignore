@@ -1,0 +1,17 @@
+# Betriebssystem und Editoren
+.DS_Store
+Thumbs.db
+desktop.ini
+*:Zone.Identifier
+.vscode/
+.idea/
+*.swp
+*~
+
+# Python (lokaler Testserver)
+__pycache__/
+
+# Lokale Notizen, die nicht öffentlich werden sollen
+privat/
+*.local.*
+.env
