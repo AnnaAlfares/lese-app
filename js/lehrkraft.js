@@ -1,0 +1,88 @@
+// Lehrkraft-Bereich: Einstellungen wählen und als Link weitergeben.
+// Der Zustand steht nur in der Adresse dieser Seite (history.replaceState) – kein Speichern.
+
+import { BUCHSTABEN, HILFEN, leseEinstellungen, einstellungenAlsParameter } from './config.js';
+import { lesbareWoerter, lesbareSilben } from './woerter.js';
+import { setzeTempo, sprichWort, stimmeBereit } from './audio.js';
+
+const e = leseEinstellungen();
+const $ = id => document.getElementById(id);
+
+// Buchstaben-Knöpfe
+$('buchstaben').innerHTML = BUCHSTABEN
+  .map((b, i) => `<button data-stand="${i + 1}" aria-label="Stand ${i + 1}: ${b.anzeige}">${b.anzeige}</button>`)
+  .join('');
+$('buchstaben').addEventListener('click', ev => {
+  const knopf = ev.target.closest('[data-stand]');
+  if (!knopf) return;
+  e.stand = Number(knopf.dataset.stand);
+  aktualisiere();
+});
+
+// Hilfen
+$('hilfen').innerHTML = HILFEN.map(h => `<button data-hilfe="${h.id}">${h.titel}</button>`).join('');
+$('hilfen').addEventListener('click', ev => {
+  const knopf = ev.target.closest('[data-hilfe]');
+  if (!knopf) return;
+  e.hilfen[knopf.dataset.hilfe] = !e.hilfen[knopf.dataset.hilfe];
+  aktualisiere();
+});
+
+// Zeitmodus
+$('zeitmodus').addEventListener('click', () => { e.zeitmodus = !e.zeitmodus; aktualisiere(); });
+
+// Sprechtempo
+$('tempo').value = e.tempo;
+$('tempo').addEventListener('input', () => { e.tempo = Number($('tempo').value); aktualisiere(); });
+$('tempo-probe').addEventListener('click', () => sprichWort('Mama und Oma lesen.'));
+stimmeBereit.then(da => {
+  $('stimme-hinweis').textContent = da
+    ? ''
+    : 'Auf diesem Gerät wurde keine deutsche Stimme gefunden. Die Lautsprecher-Knöpfe sind deshalb ausgeblendet.';
+});
+
+// Link kopieren
+$('kopieren').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText($('link').value);
+    $('kopiert').textContent = 'kopiert';
+  } catch {
+    $('link').select(); // Ersatz: Text markieren, dann von Hand kopieren
+    $('kopiert').textContent = 'Link ist markiert – bitte kopieren';
+  }
+});
+
+function aktualisiere() {
+  const n = e.stand;
+  for (const knopf of $('buchstaben').children) {
+    const s = Number(knopf.dataset.stand);
+    knopf.classList.toggle('eingefuehrt', s <= n);
+    knopf.classList.toggle('neuester', s === n);
+  }
+  for (const knopf of $('hilfen').children) {
+    knopf.setAttribute('aria-pressed', e.hilfen[knopf.dataset.hilfe]);
+  }
+  $('zeitmodus').setAttribute('aria-pressed', e.zeitmodus);
+  $('tempo-wert').textContent = `${e.tempo} %`;
+  setzeTempo(e.tempo);
+
+  // Vorschau: was ist mit diesem Stand lesbar?
+  const woerter = lesbareWoerter(n);
+  const silben = lesbareSilben(n);
+  const neue = woerter.filter(w => w.neu).length;
+  const beispiele = woerter.slice(0, 14)
+    .map(w => w.neu ? `<span class="neu">${w.wort}</span>` : w.wort).join(', ');
+  $('vorschau').innerHTML = `Stand ${n} von ${BUCHSTABEN.length}, zuletzt <b>${BUCHSTABEN[n - 1].anzeige}</b>: `
+    + `${woerter.length} Wörter (${neue} mit dem neuen Buchstaben), ${silben.length} Silben.`
+    + (woerter.length ? `<br><span class="leise">${beispiele}${woerter.length > 14 ? ' …' : ''}</span>` : '');
+
+  // Adresse dieser Seite und Link für die iPads
+  const parameter = einstellungenAlsParameter(e);
+  history.replaceState(null, '', `?${parameter}`);
+  const link = new URL(`index.html?${parameter}`, location.href).href;
+  $('link').value = link;
+  $('oeffnen').href = link;
+  $('kopiert').textContent = '';
+}
+
+aktualisiere();

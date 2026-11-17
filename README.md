@@ -20,6 +20,9 @@ python3 -m http.server 8000
 
 Dann im Browser <http://localhost:8000> öffnen. Es gibt keinen Build-Schritt und keine Abhängigkeiten.
 
+Einstellungen der Lehrkraft stehen nur in der Adresse, z. B. `index.html?b=12&h=bfi&z=1&t=80`
+(b = Buchstabenstand 1–41, h = Hilfen, z = Zeitmodus, t = Sprechtempo in %). Den Link erzeugt `lehrkraft.html`.
+
 ## Ordner
 
 | Pfad | Inhalt |
@@ -29,6 +32,7 @@ Dann im Browser <http://localhost:8000> öffnen. Es gibt keinen Build-Schritt un
 | `impressum.html` | Impressum und Datenschutz |
 | `css/app.css` | Gestaltung |
 | `js/app.js` | Navigation, Zustand im Arbeitsspeicher |
+| `js/lehrkraft.js` | Lehrkraft-Bereich: Einstellungen als Link |
 | `js/config.js` | Buchstabenreihenfolge, Einstellungen |
 | `js/woerter.js` | Wortliste, Modellwörter, Wörternetze |
 | `js/bildercode.js` | Bildercode kodieren/dekodieren |
@@ -36,6 +40,7 @@ Dann im Browser <http://localhost:8000> öffnen. Es gibt keinen Build-Schritt un
 | `js/module/` | ein Modul pro Übung |
 | `assets/codebilder/` | die 16 Bilder für den Bildercode |
 | `assets/fonts/` | lokale Schriften |
+| `test/woerter.html` | Testseite: lesbare Wörter und Silben je Buchstabenstand, Laute anhören |
 
 ## Veröffentlichung
 
