@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Test – Leseapparat</title>
+  <link rel="stylesheet" href="../css/app.css">
+  <!-- Nur für die Entwicklung: startet das Modul direkt, Einstellungen aus der Adresse,
+       z. B. test/leseapparat.html?b=9&h=bfk&t=80 -->
+</head>
+<body>
+  <main id="app"></main>
+  <script type="module">
+    import { leseEinstellungen, mitEinstellungen } from '../js/config.js';
+    import { aktiviereSprechknoepfe } from '../js/audio.js';
+    import { starte } from '../js/module/leseapparat.js';
+
+    const app = document.getElementById('app');
+    aktiviereSprechknoepfe(app);
+    starte(app, {
+      einstellungen: leseEinstellungen(),
+      zurueck: () => { location.href = mitEinstellungen('../index.html'); },
+      stern: () => console.log('Neuer Stern'),
+    });
+  </script>
+</body>
+</html>
