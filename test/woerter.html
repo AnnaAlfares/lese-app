@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Testseite – Wortliste je Buchstabenstand</title>
+  <link rel="stylesheet" href="../css/app.css">
+  <!-- Nur für die Entwicklung: zeigt, was woerter.js je Buchstabenstand findet. -->
+  <style>
+    body { font-size: 18px; letter-spacing: 0; }
+    main { max-width: 1800px; }
+    h1 { font-size: 32px; } h2 { font-size: 26px; }
+    table { border-collapse: collapse; width: 100%; background: #fff; }
+    th, td { border: 1px solid #ddd; padding: 6px 10px; vertical-align: top; text-align: left; }
+    th { background: #f1eee8; position: sticky; top: 0; }
+    td.zahl { text-align: right; white-space: nowrap; }
+    .graphem { font-size: 26px; font-weight: 600; white-space: nowrap; }
+    .w { display: inline-block; margin: 2px 6px 2px 0; padding: 0 4px; border-radius: 4px; cursor: pointer; }
+    .w.neu { background: var(--neu); font-weight: 600; }
+    .w.sicht { border: 1px dashed #999; }
+    .g { border-bottom: 2px solid #9bb; margin-right: 2px; }
+    details summary { cursor: pointer; color: #555; }
+    .laute { display: flex; flex-wrap: wrap; gap: 8px; }
+    .laute button { font-size: 22px; min-width: 80px; padding: 4px 10px; }
+    .laute button.stumm { opacity: 0.4; cursor: default; }
+    .hinweis { color: #9a4b00; }
+    td:nth-child(5) { min-width: 260px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Testseite: lesbare Wörter je Buchstabenstand</h1>
+    <p>Gelb = enthält den zuletzt eingeführten Buchstaben (wird bevorzugt). Gestrichelt = Sichtwort.
+      Wörter und Laute antippen zum Anhören (nur mit deutscher Stimme).
+      <span id="stimme"></span></p>
+
+    <h2>Laute anhören (gedehnt)</h2>
+    <p>Ausgegraut = kein Ton (keine Aufnahme und keine passende Ersatzstimme). Welche Aufnahmen fehlen,
+      zeigt die <a href="aufnahmen.html">Aufnahmeliste</a>.</p>
+    <div class="laute" id="laute"></div>
+
+    <h2>Je Buchstabenstand</h2>
+    <table>
+      <thead><tr><th>Stand</th><th>neu</th><th>Wörter</th><th>lesbare Wörter</th><th>Silben</th><th>Wörternetze</th></tr></thead>
+      <tbody id="staende"></tbody>
+    </table>
+
+    <h2>Prüfhinweise zur Wortliste</h2>
+    <ul id="hinweise"></ul>
+
+    <h2>Alle Wörter mit Graphem-Zerlegung</h2>
+    <table>
+      <thead><tr><th>Wort</th><th>Silben</th><th>Grapheme</th><th>lesbar ab</th><th>Art</th><th>Bild</th></tr></thead>
+      <tbody id="alle"></tbody>
+    </table>
+  </main>
+
+  <script type="module">
+    import { BUCHSTABEN } from '../js/config.js';
+    import { lesestoff, pruefeWortliste, alleWoerter } from '../js/woerter.js';
+    import { aktiviereSprechknoepfe, stimmeBereit, kannSprechen } from '../js/audio.js';
+
+    const wortSpan = (w, neu, sicht = false) =>
+      `<span class="w${neu ? ' neu' : ''}${sicht ? ' sicht' : ''}" data-sprich-wort="${w}">${w}</span>`;
+    const graphemeAnzeige = gr => gr.map(x => `<span class="g">${x.text}</span>`).join('');
+    const standName = n => n === Infinity ? 'nie' : `${n} (${BUCHSTABEN[n - 1].anzeige})`;
+
+    // Je Buchstabenstand
+    let zeilen = '';
+    for (let n = 1; n <= BUCHSTABEN.length; n++) {
+      const s = lesestoff(n);
+      const neue = s.woerter.filter(w => w.neu).length;
+      const sicht = s.sichtwoerter.filter(x => x.lesbar);
+      zeilen += `<tr>
+        <td class="zahl">${n}</td>
+        <td class="graphem">${s.neu.anzeige}</td>
+        <td class="zahl">${s.woerter.length}<br><small>${neue} neu</small></td>
+        <td>${s.woerter.map(w => wortSpan(w.wort, w.neu)).join('')}
+            ${sicht.map(x => wortSpan(x.wort, x.ab === n, true)).join('')}</td>
+        <td><details><summary>${s.silben.length} Silben, ${s.silben.filter(x => x.neu).length} neu</summary>
+            ${s.silben.map(x => `<span class="w${x.neu ? ' neu' : ''}" data-sprich-silbe="${x.text}">${x.text}</span>`).join('')}
+            </details></td>
+        <td>${s.netze.map(nz => `-${nz.endung}: ${nz.woerter.join(', ')}`).join('<br>')}</td>
+      </tr>`;
+    }
+    document.getElementById('staende').innerHTML = zeilen;
+
+    // Prüfhinweise
+    const hinweise = pruefeWortliste();
+    document.getElementById('hinweise').innerHTML = hinweise.length
+      ? hinweise.map(h => `<li><b>${h.wort}</b>: <span class="hinweis">${h.text}</span></li>`).join('')
+      : '<li>keine</li>';
+
+    // Alle Wörter
+    document.getElementById('alle').innerHTML = alleWoerter().map(w => `<tr>
+      <td>${wortSpan(w.wort, false)}</td><td>${w.silben.join(' · ')}</td>
+      <td>${graphemeAnzeige(w.grapheme)}</td><td>${standName(w.ab)}</td>
+      <td>${w.art}</td><td>${w.bild ? 'ja' : ''}</td></tr>`).join('');
+
+    // Laute: Knopf aktiv, wenn es einen Ton gibt (Aufnahme oder, je nach config.js, Ersatzstimme)
+    stimmeBereit.then(da => {
+      document.getElementById('stimme').textContent = da
+        ? '(Deutsche Gerätestimme gefunden.)' : '(Keine deutsche Gerätestimme – nur Aufnahmen.)';
+    });
+    document.getElementById('laute').innerHTML = BUCHSTABEN.map(b =>
+      `<button class="stumm" disabled data-laut="${b.id}">${b.anzeige}</button>`).join('');
+    for (const knopf of document.querySelectorAll('[data-laut]')) {
+      kannSprechen('laut', knopf.dataset.laut).then(ok => {
+        if (!ok) return;
+        knopf.disabled = false;
+        knopf.classList.remove('stumm');
+        knopf.dataset.sprichLaut = knopf.dataset.laut;
+      });
+    }
+
+    aktiviereSprechknoepfe(document);
+  </script>
+</body>
+</html>
