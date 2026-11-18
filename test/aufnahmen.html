@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Aufnahmeliste</title>
+  <link rel="stylesheet" href="../css/app.css">
+  <!-- Für die Lehrkraft: Welche Aufnahmen braucht die App, welche liegen schon in assets/audio/?
+       Anleitung zum Aufnehmen: docs/AUFNAHMEN.md -->
+  <style>
+    body { font-size: 18px; letter-spacing: 0; }
+    main { max-width: 1600px; }
+    h1 { font-size: 32px; } h2 { font-size: 26px; }
+    table { border-collapse: collapse; width: 100%; background: #fff; }
+    th, td { border: 1px solid #ddd; padding: 4px 10px; text-align: left; vertical-align: middle; }
+    th { background: #f1eee8; position: sticky; top: 0; }
+    code { font-size: 17px; }
+    .ok { color: #2e7d32; font-weight: 700; }
+    .fehlt { color: #b23b00; font-weight: 700; }
+    .steuer { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px; }
+    .steuer button, .steuer select { font-size: 20px; min-height: 48px; padding: 4px 16px; }
+    .steuer button[aria-pressed="true"] { background: #dcebdc; border-color: #4f8a4f; }
+    td button { font-size: 16px; min-height: 40px; min-width: 40px; padding: 2px 10px; }
+    .zusammenfassung span { margin-right: 24px; }
+    .hinweis-text { color: #555; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Aufnahmeliste</h1>
+    <p>Alle Aufnahmen, die die App bis zum gewählten Buchstabenstand braucht. Dateien in
+      <code>assets/audio/</code> ablegen, dann diese Seite neu laden. Anleitung: <code>docs/AUFNAHMEN.md</code>.
+      <span id="modus"></span></p>
+
+    <div class="steuer">
+      <label>bis Buchstabenstand <select id="stand"></select></label>
+      <button id="nur-fehlende" aria-pressed="false">nur fehlende</button>
+      <button id="kopieren">fehlende als Text kopieren</button>
+      <span id="kopiert" class="hinweis-text" aria-live="polite"></span>
+    </div>
+    <p class="zusammenfassung" id="zusammenfassung">Prüfe …</p>
+
+    <table>
+      <thead><tr><th>da?</th><th>Art</th><th>Datei (in assets/audio/)</th><th>Sprechtext</th>
+        <th>So sprechen</th><th>ab Stand</th><th></th></tr></thead>
+      <tbody id="liste"></tbody>
+    </table>
+    <textarea id="text-ersatz" hidden></textarea>
+  </main>
+
+  <script type="module">
+    import { AUDIO, BUCHSTABEN, leseEinstellungen } from '../js/config.js';
+    import { aufnahmeliste, ARTEN } from '../js/aufnahmen.js';
+    import { hatAufnahme, sprich } from '../js/audio.js';
+
+    const $ = id => document.getElementById(id);
+    let nurFehlende = false;
+    let eintraege = [];
+
+    $('modus').textContent = AUDIO.beiFehlender === 'stimme'
+      ? 'Einstellung in config.js: Fehlt eine Aufnahme, spricht ersatzweise die Gerätestimme.'
+      : 'Einstellung in config.js: Fehlt eine Aufnahme, bleibt es still (Lautsprecher ausgeblendet).';
+
+    $('stand').innerHTML = BUCHSTABEN.map((b, i) =>
+      `<option value="${i + 1}">${i + 1} – ${b.anzeige}</option>`).join('');
+    $('stand').value = leseEinstellungen().stand;
+
+    // höchstens 8 Anfragen gleichzeitig
+    async function pruefeAlle(liste) {
+      let i = 0;
+      const arbeiter = async () => {
+        while (i < liste.length) {
+          const e = liste[i++];
+          e.da = await hatAufnahme(e.art, e.wert);
+        }
+      };
+      await Promise.all(Array.from({ length: 8 }, arbeiter));
+    }
+
+    function zeige() {
+      const sichtbar = eintraege.filter(e => !nurFehlende || !e.da);
+      $('liste').innerHTML = sichtbar.map((e, i) => `<tr>
+        <td class="${e.da ? 'ok' : 'fehlt'}">${e.da ? '✓' : '✗'}</td>
+        <td>${ARTEN[e.art].titel}</td>
+        <td><code>${e.datei}</code></td>
+        <td>${e.sprechtext}</td>
+        <td class="hinweis-text">${e.hinweis}</td>
+        <td>${e.ab}</td>
+        <td>${e.da ? `<button data-nr="${eintraege.indexOf(e)}">▶</button>` : ''}</td>
+      </tr>`).join('');
+      const zeilen = Object.keys(ARTEN).map(art => {
+        const alle = eintraege.filter(e => e.art === art);
+        return `<span>${ARTEN[art].titel}: <b>${alle.filter(e => e.da).length}</b> von ${alle.length}</span>`;
+      });
+      const da = eintraege.filter(e => e.da).length;
+      $('zusammenfassung').innerHTML = `${zeilen.join('')}<span>gesamt: <b>${da}</b> von ${eintraege.length}</span>`;
+    }
+
+    async function lade() {
+      $('zusammenfassung').textContent = 'Prüfe …';
+      eintraege = aufnahmeliste(Number($('stand').value));
+      await pruefeAlle(eintraege);
+      zeige();
+    }
+
+    $('stand').addEventListener('change', lade);
+    $('nur-fehlende').addEventListener('click', () => {
+      nurFehlende = !nurFehlende;
+      $('nur-fehlende').setAttribute('aria-pressed', nurFehlende);
+      zeige();
+    });
+    $('liste').addEventListener('click', ev => {
+      const k = ev.target.closest('[data-nr]');
+      if (k) { const e = eintraege[k.dataset.nr]; sprich(e.art, e.wert); }
+    });
+    $('kopieren').addEventListener('click', async () => {
+      const text = eintraege.filter(e => !e.da)
+        .map(e => `${e.datei}\t${e.sprechtext}\t${e.hinweis}`).join('\n');
+      try {
+        await navigator.clipboard.writeText(text);
+        $('kopiert').textContent = 'kopiert (Tabulator-getrennt, passt in eine Tabelle)';
+      } catch {
+        $('text-ersatz').hidden = false;
+        $('text-ersatz').value = text;
+        $('text-ersatz').select();
+        $('kopiert').textContent = 'Text unten markiert – bitte kopieren';
+      }
+    });
+
+    lade();
+  </script>
+</body>
+</html>

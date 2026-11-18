@@ -2,7 +2,8 @@
 // Kein localStorage, keine Cookies: Der Spielstand lebt nur, solange die Seite offen ist.
 
 import { STUFEN, leseEinstellungen } from './config.js';
-import { aktiviereSprechknoepfe, sprichText } from './audio.js';
+import { aktiviereSprechknoepfe, sprichAnsage } from './audio.js';
+import { modulAnsage } from './aufnahmen.js';
 
 // Einstellungen der Lehrkraft (aus der Adresse) und Spielstand (nur im Arbeitsspeicher)
 export const einstellungen = leseEinstellungen();
@@ -55,7 +56,7 @@ function zeigeStufe(nr) {
     </div>
     <div class="kacheln">
       ${stufe.module.map(m => `
-        <button class="kachel aus" style="background:${stufe.farbe}" data-sprich-text="${m}">
+        <button class="kachel aus" style="background:${stufe.farbe}" data-sprich-ansage="${modulAnsage(m)}">
           <span class="titel">${m}</span>
           <span class="bald">kommt bald</span>
         </button>`).join('')}
@@ -66,12 +67,12 @@ app.addEventListener('click', e => {
   const kachel = e.target.closest('[data-stufe]');
   if (kachel) {
     const stufe = STUFEN[kachel.dataset.stufe - 1];
-    sprichText(stufe.titel); // Kinder können die Titel noch nicht lesen
+    sprichAnsage(`stufe-${stufe.nr}`); // Kinder können die Titel noch nicht lesen
     zeigeStufe(stufe.nr);
     return;
   }
   if (e.target.closest('.zurueck')) {
-    sprichText('Zurück');
+    sprichAnsage('zurueck');
     zeigeStart();
   }
 });

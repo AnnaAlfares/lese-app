@@ -9,56 +9,55 @@
 // anzeige     so zeigt die App das Graphem (Groß- und Kleinform, falls es beide gibt)
 // typ         'vokal' | 'dauerlaut' (dehnbar, z. B. /mmm/) | 'plosiv' (nicht dehnbar) | 'sonstig'
 // anfang      darf eine Silbe beginnen (für offene Silben wie „ma“, „lo“)
-// sprechtext  Text, den die Sprachausgabe für den gedehnten Laut vorliest.
-//             null = mit der Web Speech API nicht sauber lautierbar (Gefahr des Buchstabennamens,
-//             z. B. „Te“ statt /t/). Dann gibt es dafür keinen Lautsprecher-Knopf, bis eigene
-//             Aufnahmen in assets/audio/ liegen.
-//             Die Texte sind ein erster Versuch und auf der Testseite (test/woerter.html) anhörbar.
+// beispiel    Hinweis für die Aufnahme: so klingt der Laut (nicht für die Kinder sichtbar)
+// sprechtext  nur für die Ersatzstimme (Web Speech API), falls eine Aufnahme fehlt.
+//             null = mit der Ersatzstimme nicht sauber lautierbar (Gefahr des Buchstabennamens,
+//             z. B. „Te“ statt /t/) – dann nie Ersatzstimme, nur Aufnahme.
 
-const g = (id, anzeige, typ, anfang, sprechtext) => ({ id, anzeige, typ, anfang, sprechtext });
+const g = (id, anzeige, typ, anfang, beispiel, sprechtext) => ({ id, anzeige, typ, anfang, beispiel, sprechtext });
 
 export const BUCHSTABEN = Object.freeze([
-  g('o',   'O o',     'vokal',     false, 'oh'),
-  g('m',   'M m',     'dauerlaut', true,  'mmmm'),
-  g('e',   'E e',     'vokal',     false, 'eh'),
-  g('a',   'A a',     'vokal',     false, 'ah'),
-  g('l',   'L l',     'dauerlaut', true,  'llll'),
-  g('s',   'S s',     'dauerlaut', true,  'ssss'),
-  g('f',   'F f',     'dauerlaut', true,  'ffff'),
-  g('n',   'N n',     'dauerlaut', true,  'nnnn'),
-  g('t',   'T t',     'plosiv',    true,  null),
-  g('r',   'R r',     'dauerlaut', true,  'rrrr'),
-  g('i',   'I i',     'vokal',     false, 'ih'),
-  g('u',   'U u',     'vokal',     false, 'uh'),
-  g('k',   'K k',     'plosiv',    true,  null),
-  g('w',   'W w',     'dauerlaut', true,  'wwww'),
-  g('p',   'P p',     'plosiv',    true,  null),
-  g('h',   'H h',     'dauerlaut', true,  'hhhh'),
-  g('ei',  'Ei ei',   'vokal',     false, 'ei'),
-  g('d',   'D d',     'plosiv',    true,  null),
-  g('ch',  'Ch ch',   'dauerlaut', false, 'chchch'),
-  g('au',  'Au au',   'vokal',     false, 'au'),
-  g('z',   'Z z',     'sonstig',   true,  null),
-  g('g',   'G g',     'plosiv',    true,  null),
-  g('sch', 'Sch sch', 'dauerlaut', true,  'schschsch'),
-  g('b',   'B b',     'plosiv',    true,  null),
-  g('ie',  'ie',      'vokal',     false, 'ih'),
-  g('ö',   'Ö ö',     'vokal',     false, 'öh'),
-  g('ü',   'Ü ü',     'vokal',     false, 'üh'),
-  g('st',  'St st',   'sonstig',   true,  'scht'),
-  g('pf',  'Pf pf',   'sonstig',   true,  'pfff'),
-  g('eu',  'Eu eu',   'vokal',     false, 'eu'),
-  g('ng',  'ng',      'dauerlaut', false, null),
-  g('sp',  'Sp sp',   'sonstig',   true,  null),
-  g('j',   'J j',     'dauerlaut', true,  null),
-  g('ä',   'Ä ä',     'vokal',     false, 'äh'),
-  g('qu',  'Qu qu',   'sonstig',   true,  null),
-  g('x',   'X x',     'sonstig',   false, null),
-  g('v',   'V v',     'dauerlaut', true,  null),
-  g('c',   'C c',     'sonstig',   false, null),
-  g('y',   'Y y',     'sonstig',   false, null),
-  g('ß',   'ß',       'dauerlaut', false, 'ssss'),
-  g('chs', 'chs',     'sonstig',   false, null),
+  g('o',   'O o',     'vokal',     false, 'wie in Oma',            'oh'),
+  g('m',   'M m',     'dauerlaut', true,  'wie in Mama',           'mmmm'),
+  g('e',   'E e',     'vokal',     false, 'wie in Esel',           'eh'),
+  g('a',   'A a',     'vokal',     false, 'wie in Ameise',         'ah'),
+  g('l',   'L l',     'dauerlaut', true,  'wie in Lama',           'llll'),
+  g('s',   'S s',     'dauerlaut', true,  'wie in Sofa (summend)', 'ssss'),
+  g('f',   'F f',     'dauerlaut', true,  'wie in Fisch',          'ffff'),
+  g('n',   'N n',     'dauerlaut', true,  'wie in Nase',           'nnnn'),
+  g('t',   'T t',     'plosiv',    true,  'wie in Tomate',         null),
+  g('r',   'R r',     'dauerlaut', true,  'wie in Rose',           'rrrr'),
+  g('i',   'I i',     'vokal',     false, 'wie in Insel',          'ih'),
+  g('u',   'U u',     'vokal',     false, 'wie in Ufo',            'uh'),
+  g('k',   'K k',     'plosiv',    true,  'wie in Kerze',          null),
+  g('w',   'W w',     'dauerlaut', true,  'wie in Wolke',          'wwww'),
+  g('p',   'P p',     'plosiv',    true,  'wie in Pinsel',         null),
+  g('h',   'H h',     'dauerlaut', true,  'wie in Hut (gehaucht)', 'hhhh'),
+  g('ei',  'Ei ei',   'vokal',     false, 'wie in Eis',            'ei'),
+  g('d',   'D d',     'plosiv',    true,  'wie in Dose',           null),
+  g('ch',  'Ch ch',   'dauerlaut', false, 'wie in ich',            'chchch'),
+  g('au',  'Au au',   'vokal',     false, 'wie in Auto',           'au'),
+  g('z',   'Z z',     'sonstig',   true,  'wie in Zelt (/ts/)',    null),
+  g('g',   'G g',     'plosiv',    true,  'wie in Gabel',          null),
+  g('sch', 'Sch sch', 'dauerlaut', true,  'wie in Schere',         'schschsch'),
+  g('b',   'B b',     'plosiv',    true,  'wie in Banane',         null),
+  g('ie',  'ie',      'vokal',     false, 'wie in Biene',          'ih'),
+  g('ö',   'Ö ö',     'vokal',     false, 'wie in Öl',             'öh'),
+  g('ü',   'Ü ü',     'vokal',     false, 'wie in Tüte',           'üh'),
+  g('st',  'St st',   'sonstig',   true,  'wie in Stein (/scht/)', 'scht'),
+  g('pf',  'Pf pf',   'sonstig',   true,  'wie in Pferd',          'pfff'),
+  g('eu',  'Eu eu',   'vokal',     false, 'wie in Eule',           'eu'),
+  g('ng',  'ng',      'dauerlaut', false, 'wie in Ring',           null),
+  g('sp',  'Sp sp',   'sonstig',   true,  'wie in Spinne (/schp/)', null),
+  g('j',   'J j',     'dauerlaut', true,  'wie in Jojo',           null),
+  g('ä',   'Ä ä',     'vokal',     false, 'wie in Käse',           'äh'),
+  g('qu',  'Qu qu',   'sonstig',   true,  'wie in Qualle (/kw/)',  null),
+  g('x',   'X x',     'sonstig',   false, 'wie in Hexe (/ks/)',    null),
+  g('v',   'V v',     'dauerlaut', true,  'wie in Vogel (/f/)',    null),
+  g('c',   'C c',     'sonstig',   false, 'wie in Clown (/k/)',    null),
+  g('y',   'Y y',     'sonstig',   false, 'wie in Pony (/i/)',     null),
+  g('ß',   'ß',       'dauerlaut', false, 'wie in Fuß',            'ssss'),
+  g('chs', 'chs',     'sonstig',   false, 'wie in Fuchs (/ks/)',   null),
 ]);
 
 export const ANZAHL_BUCHSTABEN = BUCHSTABEN.length; // 41
@@ -73,6 +72,19 @@ export function position(id) {
   const i = BUCHSTABEN.findIndex(b => b.id === id);
   return i < 0 ? Infinity : i + 1;
 }
+
+// ---------------------------------------------------------------------------
+// Aufnahmen (assets/audio/)
+// ---------------------------------------------------------------------------
+// Alles wird als eigene Aufnahme abgespielt (Dateinamen siehe js/aufnahmen.js und docs/AUFNAHMEN.md).
+// beiFehlender legt fest, was passiert, wenn eine Aufnahme (noch) fehlt:
+//   'stimme'     – die Gerätestimme (Web Speech API) spricht ersatzweise, falls eine deutsche da ist
+//   'ausblenden' – kein Ton; Lautsprecher-Knöpfe für diese Stelle werden ausgeblendet
+// VORLÄUFIG 'stimme', damit die App beim Testen nicht stumm ist – Entscheidung steht noch aus.
+export const AUDIO = Object.freeze({
+  format: 'mp3',
+  beiFehlender: 'stimme',
+});
 
 /** Wie viel stärker Wörter/Silben mit dem zuletzt eingeführten Buchstaben gewichtet werden. */
 export const GEWICHT_NEUER_BUCHSTABE = 3;

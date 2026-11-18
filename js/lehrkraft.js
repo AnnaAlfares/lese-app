@@ -3,7 +3,7 @@
 
 import { BUCHSTABEN, HILFEN, leseEinstellungen, einstellungenAlsParameter } from './config.js';
 import { lesbareWoerter, lesbareSilben } from './woerter.js';
-import { setzeTempo, sprichWort, stimmeBereit } from './audio.js';
+import { setzeTempo, sprichMitStimme, stimmeBereit } from './audio.js';
 
 const e = leseEinstellungen();
 const $ = id => document.getElementById(id);
@@ -34,11 +34,11 @@ $('zeitmodus').addEventListener('click', () => { e.zeitmodus = !e.zeitmodus; akt
 // Sprechtempo
 $('tempo').value = e.tempo;
 $('tempo').addEventListener('input', () => { e.tempo = Number($('tempo').value); aktualisiere(); });
-$('tempo-probe').addEventListener('click', () => sprichWort('Mama und Oma lesen.'));
+$('tempo-probe').addEventListener('click', () => sprichMitStimme('Mama und Oma lesen.'));
 stimmeBereit.then(da => {
   $('stimme-hinweis').textContent = da
     ? ''
-    : 'Auf diesem Gerät wurde keine deutsche Stimme gefunden. Die Lautsprecher-Knöpfe sind deshalb ausgeblendet.';
+    : 'Auf diesem Gerät gibt es keine deutsche Gerätestimme. Es erklingen nur eigene Aufnahmen.';
 });
 
 // Link kopieren

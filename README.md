@@ -36,10 +36,13 @@ Einstellungen der Lehrkraft stehen nur in der Adresse, z. B. `index.html?b=12&h=
 | `js/config.js` | Buchstabenreihenfolge, Einstellungen |
 | `js/woerter.js` | Wortliste, Modellwörter, Wörternetze |
 | `js/bildercode.js` | Bildercode kodieren/dekodieren |
-| `js/audio.js` | Vorlesen (Laute, Silben, Wörter) |
+| `js/audio.js` | Vorlesen: spielt Aufnahmen ab (Laute, Silben, Wörter, Ansagen) |
+| `js/aufnahmen.js` | Dateinamen und Liste aller benötigten Aufnahmen, Ansagetexte |
 | `js/module/` | ein Modul pro Übung |
 | `assets/codebilder/` | die 16 Bilder für den Bildercode |
+| `assets/audio/` | eigene Aufnahmen (Anleitung: `docs/AUFNAHMEN.md`) |
 | `assets/fonts/` | lokale Schriften |
+| `test/aufnahmen.html` | Aufnahmeliste: welche Aufnahmen vorhanden sind, welche fehlen |
 | `test/woerter.html` | Testseite: lesbare Wörter und Silben je Buchstabenstand, Laute anhören |
 
 ## Veröffentlichung

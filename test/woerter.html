@@ -36,8 +36,8 @@
       <span id="stimme"></span></p>
 
     <h2>Laute anhören (gedehnt)</h2>
-    <p>Ausgegraut = kein Sprechtext hinterlegt (Plosive u. a.), dort erscheint in der App kein Lautsprecher.
-      Bitte prüfen: Klingt jeder Laut als Laut – nie als Buchstabenname?</p>
+    <p>Ausgegraut = kein Ton (keine Aufnahme und keine passende Ersatzstimme). Welche Aufnahmen fehlen,
+      zeigt die <a href="aufnahmen.html">Aufnahmeliste</a>.</p>
     <div class="laute" id="laute"></div>
 
     <h2>Je Buchstabenstand</h2>
@@ -59,7 +59,7 @@
   <script type="module">
     import { BUCHSTABEN } from '../js/config.js';
     import { lesestoff, pruefeWortliste, alleWoerter } from '../js/woerter.js';
-    import { aktiviereSprechknoepfe, stimmeBereit, kannLaut } from '../js/audio.js';
+    import { aktiviereSprechknoepfe, stimmeBereit, kannSprechen } from '../js/audio.js';
 
     const wortSpan = (w, neu, sicht = false) =>
       `<span class="w${neu ? ' neu' : ''}${sicht ? ' sicht' : ''}" data-sprich-wort="${w}">${w}</span>`;
@@ -98,14 +98,21 @@
       <td>${graphemeAnzeige(w.grapheme)}</td><td>${standName(w.ab)}</td>
       <td>${w.art}</td><td>${w.bild ? 'ja' : ''}</td></tr>`).join('');
 
-    // Laute
+    // Laute: Knopf aktiv, wenn es einen Ton gibt (Aufnahme oder, je nach config.js, Ersatzstimme)
     stimmeBereit.then(da => {
       document.getElementById('stimme').textContent = da
-        ? '(Deutsche Stimme gefunden.)' : '(Keine deutsche Stimme gefunden – Anhören nicht möglich.)';
-      document.getElementById('laute').innerHTML = BUCHSTABEN.map(b => kannLaut(b.id)
-        ? `<button data-sprich-laut="${b.id}" title="${b.sprechtext}">${b.anzeige}</button>`
-        : `<button class="stumm" disabled>${b.anzeige}</button>`).join('');
+        ? '(Deutsche Gerätestimme gefunden.)' : '(Keine deutsche Gerätestimme – nur Aufnahmen.)';
     });
+    document.getElementById('laute').innerHTML = BUCHSTABEN.map(b =>
+      `<button class="stumm" disabled data-laut="${b.id}">${b.anzeige}</button>`).join('');
+    for (const knopf of document.querySelectorAll('[data-laut]')) {
+      kannSprechen('laut', knopf.dataset.laut).then(ok => {
+        if (!ok) return;
+        knopf.disabled = false;
+        knopf.classList.remove('stumm');
+        knopf.dataset.sprichLaut = knopf.dataset.laut;
+      });
+    }
 
     aktiviereSprechknoepfe(document);
   </script>

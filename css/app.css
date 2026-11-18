@@ -60,9 +60,11 @@ button, .knopf {
 button:active, .knopf:active { transform: scale(0.97); }
 button:focus-visible, .knopf:focus-visible { outline: 4px solid var(--akzent); outline-offset: 3px; }
 
-/* Lautsprecher: erst sichtbar, wenn eine deutsche Stimme gefunden wurde (audio.js) */
-.lautsprecher { display: none; }
-.stimme-da .lautsprecher { display: inline-flex; }
+/* Lautsprecher: erst sichtbar, wenn es dafür einen Ton gibt (Aufnahme oder Ersatzstimme, audio.js) */
+.lautsprecher:not(.ton-da) { display: none; }
+/* nur sinnvoll mit Gerätestimme (z. B. Tempo-Probe) */
+.nur-stimme { display: none; }
+.stimme-da .nur-stimme { display: inline-flex; }
 
 footer { padding: 16px 40px; font-size: 18px; color: #777; }
 footer a { color: #777; }
