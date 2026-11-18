@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Testseite – Rutschen: Silben und Wörter je Buchstabenstand</title>
+  <link rel="stylesheet" href="../css/app.css">
+  <style>
+    body { font-size: 18px; letter-spacing: 0; }
+    table { border-collapse: collapse; width: 100%; background: #fff; }
+    th, td { border: 1px solid #ddd; padding: 6px 10px; vertical-align: top; text-align: left; }
+    th { background: #f1eee8; }
+    .neu { background: var(--neu); font-weight: 600; }
+    span { margin-right: 8px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Rutschen: Lesestoff je Buchstabenstand</h1>
+    <p>Nur Dauerlaut + einfacher Vokal (keine Zwielaute), Wörter aus 2–3 solchen Silben, ohne -e am Ende.
+      Gelb = mit dem neuesten Buchstaben (wird häufiger gezogen).</p>
+    <table><thead><tr><th>Stand</th><th>Silben</th><th>Wörter</th></tr></thead><tbody id="t"></tbody></table>
+  </main>
+  <script type="module">
+    import { BUCHSTABEN } from '../js/config.js';
+    import { rutschSilben, rutschWoerter } from '../js/module/rutschen.js';
+    const zeig = l => l.map(x => `<span class="${x.neu ? 'neu' : ''}">${x.silben.map(s => s.text).join('-')}</span>`).join('');
+    document.getElementById('t').innerHTML = BUCHSTABEN.map((b, i) =>
+      `<tr><td>${i + 1} (${b.anzeige})</td><td>${zeig(rutschSilben(i + 1))}</td><td>${zeig(rutschWoerter(i + 1))}</td></tr>`).join('');
+  </script>
+</body>
+</html>

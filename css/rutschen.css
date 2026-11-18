@@ -1,0 +1,65 @@
+/* Modul „Rutschen“ – wird von js/module/rutschen.js nachgeladen. */
+
+/* Fußzeile während der Übung ausblenden, damit alles ohne Scrollen passt */
+body:has(.rutschen) footer { display: none; }
+
+.rutschen { display: flex; flex-direction: column; min-height: calc(100vh - 64px); }
+.rutschen .kopf { margin-bottom: 8px; }
+.rutschen .kopf-mitte { flex: 1; display: flex; justify-content: center; }
+.modul-zurueck svg { width: 40px; height: 40px; }
+
+/* Auswahl Silben / Wörter */
+.rutschen-teil { background: #d3e4f5; width: 340px; }
+.rutschen-teil .symbol { width: auto; height: 130px; }
+.rutschen-teil .symbol-text { font-size: 48px; font-weight: 600; letter-spacing: 0.08em; }
+.rutschen-teil:disabled { opacity: 0.35; box-shadow: none; }
+.rutschen-hinweis { font-size: 22px; color: #666; text-align: center; }
+
+/* Sterne (Fortschritt der Runde) */
+.sterne { display: flex; gap: 6px; }
+.stern svg { width: 40px; height: 40px; fill: #e6e0d4; }
+.stern.voll svg { fill: #f2b707; }
+.sterne.gross { flex-wrap: wrap; justify-content: center; gap: 12px; }
+.sterne.gross .stern svg { width: 96px; height: 96px; }
+
+/* Rutschen */
+.bahnen { flex: 1; display: flex; justify-content: center; align-items: center; gap: 8px; }
+.rutsche { transition: opacity 0.3s; }
+.rutsche:not(.dran):not(.fertig) { opacity: 0.35; }
+.rutsche-bild {
+  display: block;
+  height: auto;
+  /* so groß wie möglich: passt in die Höhe (Kopf und Ergebniszeile abziehen) und in die Breite */
+  width: min(calc((100vw - 140px) / var(--anzahl, 1)), calc((100vh - 290px) * 360 / 470));
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.rutsche-bild .bahn-grund { fill: none; stroke: #e9e2d3; stroke-width: 58; stroke-linecap: round; }
+.rutsche-bild .bahn-weg { fill: none; stroke: var(--farbe); stroke-opacity: 0.35; stroke-width: 58; stroke-linecap: round; }
+.rutsche-bild .laut { font-family: var(--schrift); font-size: 120px; font-weight: 600; text-anchor: middle; fill: var(--farbe); }
+.rutsche-bild .leuchte { fill: var(--neu); opacity: 0; transition: opacity 0.15s; }
+.rutsche-bild.klingt-k .leuchte-k,
+.rutsche-bild.klingt-v .leuchte-v { opacity: 1; }
+.rutsche-bild .kugel { fill: #fff; stroke: var(--farbe); stroke-width: 8; }
+.rutsche.dran .rutsche-bild:not(.aktiv):not(.fertig) .kugel { animation: wippen 1.6s ease-in-out infinite; }
+.rutsche-bild.aktiv .kugel { fill: var(--neu); }
+@keyframes wippen { 50% { stroke-width: 16; } }
+
+/* Ergebniszeile: Silbe/Wort zum Selberlesen */
+.ergebnis { display: flex; justify-content: center; align-items: center; gap: 32px; min-height: 120px; }
+.ergebnis .lesewort, .ergebnis .vorlesen, .ergebnis .weiter { visibility: hidden; }
+.geschafft .ergebnis .lesewort, .geschafft .ergebnis .vorlesen, .geschafft .ergebnis .weiter { visibility: visible; }
+.lesewort { display: flex; font-size: 88px; font-weight: 600; letter-spacing: 0.08em; line-height: 1.1; }
+.lesewort.mit-boegen .silbe {
+  padding: 0 8px 10px;
+  border-bottom: 5px solid currentColor;
+  border-radius: 0 0 50% 50% / 0 0 24px 24px;
+}
+.ergebnis svg { width: 48px; height: 48px; }
+.ergebnis .weiter { min-width: 120px; min-height: 96px; background: #dcebdc; border-color: #4f8a4f; }
+.ergebnis .weiter svg { width: 64px; height: 64px; }
+
+.ende { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 48px; }
+.nochmal-runde svg { width: 64px; height: 64px; }
+.nochmal-runde { min-width: 120px; min-height: 96px; }

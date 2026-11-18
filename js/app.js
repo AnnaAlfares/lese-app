@@ -32,6 +32,11 @@ const SYMBOLE = {
 const PFEIL_ZURUECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
   stroke-linecap="round" stroke-linejoin="round"><path d="M15 4 L7 12 L15 20"/></svg>`;
 
+// Fertige Module: Name (wie in config.js, STUFEN) → Datei. Jedes Modul exportiert starte(wurzel, { einstellungen, zurueck }).
+const MODULE = {
+  'Rutschen': './module/rutschen.js',
+};
+
 const app = document.getElementById('app');
 
 function zeigeStart() {
@@ -56,9 +61,10 @@ function zeigeStufe(nr) {
     </div>
     <div class="kacheln">
       ${stufe.module.map(m => `
-        <button class="kachel aus" style="background:${stufe.farbe}" data-sprich-ansage="${modulAnsage(m)}">
+        <button class="kachel${MODULE[m] ? '' : ' aus'}" style="background:${stufe.farbe}"
+          data-sprich-ansage="${modulAnsage(m)}"${MODULE[m] ? ` data-modul="${m}" data-modul-stufe="${nr}"` : ''}>
           <span class="titel">${m}</span>
-          <span class="bald">kommt bald</span>
+          ${MODULE[m] ? '' : '<span class="bald">kommt bald</span>'}
         </button>`).join('')}
     </div>`;
 }
@@ -69,6 +75,13 @@ app.addEventListener('click', e => {
     const stufe = STUFEN[kachel.dataset.stufe - 1];
     sprichAnsage(`stufe-${stufe.nr}`); // Kinder können die Titel noch nicht lesen
     zeigeStufe(stufe.nr);
+    return;
+  }
+  const modul = e.target.closest('[data-modul]');
+  if (modul) {
+    const nr = Number(modul.dataset.modulStufe);
+    import(MODULE[modul.dataset.modul])
+      .then(m => m.starte(app, { einstellungen, zurueck: () => zeigeStufe(nr) }));
     return;
   }
   if (e.target.closest('.zurueck')) {
