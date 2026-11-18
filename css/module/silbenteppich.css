@@ -1,0 +1,112 @@
+/* Silbenteppich – wird von js/module/silbenteppich.js geladen.
+   Ruhig: ein Teppich, eine hervorgehobene Silbe. Schriftgröße passt sich an Zeilen/Spalten an,
+   damit der ganze Teppich ohne Scrollen auf iPad (1180 × 820) und Digiboard (1920 × 1080) passt. */
+
+.modul .kopf h1 { flex: 1; }
+.st-zurueck svg, .st-schritt svg, .modul .lautsprecher svg { width: 40px; height: 40px; }
+
+/* ---------- Auswahl ---------- */
+.st-optionen { display: flex; flex-wrap: wrap; gap: 32px; justify-content: center; margin: 8px 0 24px; }
+.st-gruppe { display: flex; gap: 8px; }
+.st-gruppe button { min-width: 110px; font-size: 36px; }
+.st-gruppe button[aria-pressed="true"] { border-color: #7b4ea0; background: #efe2f7; border-width: 4px; }
+.st-gruppe button[aria-pressed="false"] { color: #777; }
+.st-optionen .blau { color: var(--silbe-blau); }
+.st-optionen .rot { color: var(--silbe-rot); }
+.st-modi .kachel { background: #eadcf2; }
+
+/* ---------- Lesen ---------- */
+.st-leiste { margin-bottom: 12px; }
+.st-anzeige { flex: 1; display: flex; align-items: center; gap: 24px; font-size: 40px; font-variant-numeric: tabular-nums; }
+.st-uhr { min-width: 3.2em; }
+.st-balken { width: 260px; height: 24px; border-radius: 12px; background: #e6e0d4; overflow: hidden; }
+.st-balken span { display: block; height: 100%; width: 100%; background: #7b4ea0; transition: width 0.2s linear; }
+.st-zaehler { font-weight: 600; min-width: 2em; }
+.st-rekord { display: inline-flex; align-items: center; gap: 8px; color: #8a6a10; }
+.st-rekord svg { width: 44px; height: 44px; }
+
+.st-flaeche { position: relative; }
+
+.st-teppich {
+  /* Platz für Kopfleiste, Ränder und Fußzeile abziehen, dann je Zeile/Spalte teilen */
+  --groesse: clamp(32px, min(calc((100vh - 270px) / var(--zeilen) * 0.5),
+                             calc((100vw - 140px) / var(--spalten) * 0.26)), 110px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--groesse) * 0.35);
+  padding: calc(var(--groesse) * 0.3) 16px;
+  background: var(--flaeche);
+  border: 3px solid var(--rand);
+  border-radius: var(--radius);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  transition: filter 0.3s;
+}
+.st-teppich.verdeckt { filter: blur(14px); pointer-events: none; }
+
+.st-zeile {
+  display: grid;
+  grid-template-columns: repeat(var(--spalten), calc(var(--groesse) * 3.4));
+  gap: calc(var(--groesse) * 0.2);
+}
+.st-feld {
+  font-size: var(--groesse);
+  line-height: 1.35;
+  letter-spacing: 0.08em;
+  text-align: center;
+  border: 4px solid transparent;
+  border-radius: 16px;
+  transition: opacity 0.15s, background-color 0.15s;
+}
+.st-feld.laut { color: #555; }                          /* einzelner Laut am Zeilenanfang / Vokalzeile */
+.st-feld.blau { color: var(--silbe-blau); }
+.st-feld.rot { color: var(--silbe-rot); }
+.st-feld .koenig { text-decoration: underline; text-decoration-thickness: 0.08em; text-underline-offset: 0.15em; }
+.st-feld.aktuell { background: var(--neu); border-color: #e0b84a; }
+.st-feld.gelesen { opacity: 0.35; }
+
+.st-start {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  border: none;
+  background: #7b4ea0;
+  color: #fff;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.18);
+}
+.st-start svg { width: 90px; height: 90px; margin-left: 10px; }
+
+.st-ende {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  background: rgba(251, 248, 242, 0.92);
+  border-radius: var(--radius);
+}
+.st-ende[hidden] { display: none; }
+.st-ergebnis { display: flex; align-items: center; gap: 32px; }
+.st-ergebnis svg { width: 160px; height: 160px; }
+.st-ende.rekord .st-ergebnis svg { animation: st-huepfen 0.6s ease-out 2; }
+.st-gross { font-size: 96px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.st-knoepfe { display: flex; gap: 32px; }
+.st-knoepfe button { width: 140px; height: 120px; font-size: 64px; }
+.st-knoepfe svg { width: 90px; height: 90px; }
+.st-hinweis { font-size: 36px; }
+
+@keyframes st-huepfen {
+  0%, 100% { transform: translateY(0) scale(1); }
+  40% { transform: translateY(-24px) scale(1.1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .st-ende.rekord .st-ergebnis svg { animation: none; }
+}

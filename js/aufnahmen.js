@@ -49,6 +49,16 @@ export const ANSAGEN = Object.freeze({
   // Bildercode (CLAUDE.md, Regel 10): Zahlen; die Bildnamen sind Wörter (siehe CODEBILDER)
   ...Object.fromEntries(ZAHLWOERTER.map((z, i) => [`zahl-${i + 1}`, z])),
   'schau-noch-einmal': 'Schau noch einmal auf deine Karte.',
+  // Silbenteppich (und andere Tempoübungen)
+  'ohne-zeit': 'Ohne Zeit',
+  'eine-minute': 'Eine Minute',
+  'zeit-stoppen': 'Zeit stoppen',
+  'los': 'Los!',
+  'geschafft': 'Geschafft!',
+  'zeit-um': 'Die Zeit ist um.',
+  'neuer-rekord': 'Neuer Rekord!',
+  'noch-einmal': 'Noch einmal',
+  'neuer-teppich': 'Neuer Teppich',
 });
 
 /** Ansage-id eines Modulnamens, z. B. 'Wo hörst du es?' → 'modul-wo-hoerst-du-es'. */
