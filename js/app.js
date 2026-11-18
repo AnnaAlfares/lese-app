@@ -3,7 +3,7 @@
 
 import { STUFEN, leseEinstellungen } from './config.js';
 import { aktiviereSprechknoepfe, sprichAnsage } from './audio.js';
-import { modulAnsage } from './aufnahmen.js';
+import { modulAnsage, dateiStamm } from './aufnahmen.js';
 
 // Einstellungen der Lehrkraft (aus der Adresse) und Spielstand (nur im Arbeitsspeicher)
 export const einstellungen = leseEinstellungen();
@@ -56,14 +56,47 @@ function zeigeStufe(nr) {
     </div>
     <div class="kacheln">
       ${stufe.module.map(m => `
-        <button class="kachel aus" style="background:${stufe.farbe}" data-sprich-ansage="${modulAnsage(m)}">
+        <button class="kachel aus" style="background:${stufe.farbe}" data-sprich-ansage="${modulAnsage(m)}"
+          data-modul="${m}" data-in-stufe="${stufe.nr}">
           <span class="titel">${m}</span>
           <span class="bald">kommt bald</span>
         </button>`).join('')}
     </div>`;
+  // Kacheln freischalten, deren Modul-Datei es schon gibt
+  for (const k of app.querySelectorAll('[data-modul]')) {
+    fetch(modulUrl(k.dataset.modul), { method: 'HEAD', cache: 'no-cache' })
+      .then(r => { if (r.ok) { k.classList.remove('aus'); k.querySelector('.bald')?.remove(); } }, () => {});
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Module: Datei js/module/<name>.js (Name wie bei Aufnahmen: „Wort-Fang“ → wort-fang.js).
+// Ein Modul exportiert starte(behaelter, { einstellungen, zustand }) und gibt eine
+// Aufräum-Funktion zurück (Zeitgeber stoppen …), die beim Zurück-Tippen aufgerufen wird.
+// ---------------------------------------------------------------------------
+const modulUrl = name => new URL(`./module/${dateiStamm(name)}.js`, import.meta.url).href;
+let beendeModul = null;
+let aktuelleStufe = null;
+
+async function zeigeModul(name, stufenNr) {
+  let modul;
+  try { modul = await import(modulUrl(name)); } catch { return; } // noch nicht gebaut
+  aktuelleStufe = stufenNr;
+  app.innerHTML = `
+    <div class="kopf">
+      <button class="zurueck" aria-label="Zurück">${PFEIL_ZURUECK}</button>
+      <h1>${name}</h1>
+    </div>
+    <div class="modul"></div>`;
+  beendeModul = modul.starte(app.querySelector('.modul'), { einstellungen, zustand }) ?? null;
 }
 
 app.addEventListener('click', e => {
+  const modulKachel = e.target.closest('[data-modul]:not(.aus)');
+  if (modulKachel) {
+    zeigeModul(modulKachel.dataset.modul, Number(modulKachel.dataset.inStufe));
+    return;
+  }
   const kachel = e.target.closest('[data-stufe]');
   if (kachel) {
     const stufe = STUFEN[kachel.dataset.stufe - 1];
@@ -73,7 +106,15 @@ app.addEventListener('click', e => {
   }
   if (e.target.closest('.zurueck')) {
     sprichAnsage('zurueck');
-    zeigeStart();
+    if (beendeModul || aktuelleStufe) {
+      beendeModul?.();
+      beendeModul = null;
+      const nr = aktuelleStufe;
+      aktuelleStufe = null;
+      zeigeStufe(nr);
+    } else {
+      zeigeStart();
+    }
   }
 });
 

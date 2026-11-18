@@ -49,6 +49,12 @@ export const ANSAGEN = Object.freeze({
   // Bildercode (CLAUDE.md, Regel 10): Zahlen; die Bildnamen sind Wörter (siehe CODEBILDER)
   ...Object.fromEntries(ZAHLWOERTER.map((z, i) => [`zahl-${i + 1}`, z])),
   'schau-noch-einmal': 'Schau noch einmal auf deine Karte.',
+  // Blitzlesen
+  'blitz-schau': 'Schau genau hin!',
+  'blitz-bild': 'Welches Bild passt?',
+  'blitz-wort': 'Welches Wort war das?',
+  'blitz-fertig': 'Geschafft!',
+  'blitz-rekord': 'Neuer Rekord!',
 });
 
 /** Ansage-id eines Modulnamens, z. B. 'Wo hörst du es?' → 'modul-wo-hoerst-du-es'. */
