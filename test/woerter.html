@@ -19,6 +19,7 @@
     .w { display: inline-block; margin: 2px 6px 2px 0; padding: 0 4px; border-radius: 4px; cursor: pointer; }
     .w.neu { background: var(--neu); font-weight: 600; }
     .w.sicht { border: 1px dashed #999; }
+    .w.ganz { font-style: italic; color: #6a4c93; }
     .g { border-bottom: 2px solid #9bb; margin-right: 2px; }
     details summary { cursor: pointer; color: #555; }
     .laute { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -31,13 +32,14 @@
 <body>
   <main>
     <h1>Testseite: lesbare Wörter je Buchstabenstand</h1>
-    <p>Gelb = enthält den zuletzt eingeführten Buchstaben (wird bevorzugt). Gestrichelt = Sichtwort.
-      Wörter und Laute antippen zum Anhören (nur mit deutscher Stimme).
+    <p>Gelb = enthält den zuletzt eingeführten Buchstaben (wird bevorzugt). Gestrichelt = Sichtwort, kursiv-lila = Sichtwort als Ganzwort (noch nicht alle Buchstaben eingeführt).
+      Wörter und Silben antippen zum Anhören (Aufnahme oder Gerätestimme); Laute nur mit Aufnahme.
       <span id="stimme"></span></p>
 
     <h2>Laute anhören (gedehnt)</h2>
-    <p>Ausgegraut = kein Ton (keine Aufnahme und keine passende Ersatzstimme). Welche Aufnahmen fehlen,
-      zeigt die <a href="aufnahmen.html">Aufnahmeliste</a>.</p>
+    <p>Laute erklingen nur aus eigenen Aufnahmen, nie über die Gerätestimme.
+      Ausgegraut = noch keine Aufnahme (in der App ist der Lautsprecher dort ausgeblendet).
+      Welche Aufnahmen fehlen, zeigt die <a href="aufnahmen.html">Aufnahmeliste</a>.</p>
     <div class="laute" id="laute"></div>
 
     <h2>Je Buchstabenstand</h2>
@@ -61,8 +63,9 @@
     import { lesestoff, pruefeWortliste, alleWoerter } from '../js/woerter.js';
     import { aktiviereSprechknoepfe, stimmeBereit, kannSprechen } from '../js/audio.js';
 
-    const wortSpan = (w, neu, sicht = false) =>
-      `<span class="w${neu ? ' neu' : ''}${sicht ? ' sicht' : ''}" data-sprich-wort="${w}">${w}</span>`;
+    const wortSpan = (w, neu, sicht = false, ganz = false) =>
+      `<span class="w${neu ? ' neu' : ''}${sicht ? ' sicht' : ''}${ganz ? ' ganz' : ''}" data-sprich-wort="${w}"`
+      + `${ganz ? ' title="Ganzwort: noch nicht alle Buchstaben eingeführt"' : ''}>${w}</span>`;
     const graphemeAnzeige = gr => gr.map(x => `<span class="g">${x.text}</span>`).join('');
     const standName = n => n === Infinity ? 'nie' : `${n} (${BUCHSTABEN[n - 1].anzeige})`;
 
@@ -71,13 +74,14 @@
     for (let n = 1; n <= BUCHSTABEN.length; n++) {
       const s = lesestoff(n);
       const neue = s.woerter.filter(w => w.neu).length;
-      const sicht = s.sichtwoerter.filter(x => x.lesbar);
+      // Sichtwörter, die gezeigt werden und nicht schon in der Wortliste stehen (z. B. „am“)
+      const sicht = s.sichtwoerter.filter(x => x.lesbar && !s.woerter.some(w => w.wort === x.wort));
       zeilen += `<tr>
         <td class="zahl">${n}</td>
         <td class="graphem">${s.neu.anzeige}</td>
         <td class="zahl">${s.woerter.length}<br><small>${neue} neu</small></td>
         <td>${s.woerter.map(w => wortSpan(w.wort, w.neu)).join('')}
-            ${sicht.map(x => wortSpan(x.wort, x.ab === n, true)).join('')}</td>
+            ${sicht.map(x => wortSpan(x.wort, x.ab === n, true, x.ganzwort)).join('')}</td>
         <td><details><summary>${s.silben.length} Silben, ${s.silben.filter(x => x.neu).length} neu</summary>
             ${s.silben.map(x => `<span class="w${x.neu ? ' neu' : ''}" data-sprich-silbe="${x.text}">${x.text}</span>`).join('')}
             </details></td>
@@ -98,7 +102,7 @@
       <td>${graphemeAnzeige(w.grapheme)}</td><td>${standName(w.ab)}</td>
       <td>${w.art}</td><td>${w.bild ? 'ja' : ''}</td></tr>`).join('');
 
-    // Laute: Knopf aktiv, wenn es einen Ton gibt (Aufnahme oder, je nach config.js, Ersatzstimme)
+    // Laute: Knopf nur aktiv, wenn es die Aufnahme gibt (nie Gerätestimme)
     stimmeBereit.then(da => {
       document.getElementById('stimme').textContent = da
         ? '(Deutsche Gerätestimme gefunden.)' : '(Keine deutsche Gerätestimme – nur Aufnahmen.)';
