@@ -1,15 +1,22 @@
 // Vorlesen von Lauten (gedehnt), Silben, Wörtern und Ansagen.
 // Zuerst werden eigene Aufnahmen aus assets/audio/ abgespielt (Dateinamen: js/aufnahmen.js).
-// Fehlt eine Aufnahme, entscheidet AUDIO.beiFehlender in config.js:
-//   'stimme'     → Gerätestimme (Web Speech API), falls eine deutsche Stimme da ist
-//   'ausblenden' → kein Ton, Lautsprecher-Knopf ausgeblendet
+//
+// Fehlt eine Aufnahme:
+//   - Einzellaute (Konsonanten und Vokale): IMMER still, Lautsprecher-Knopf ausgeblendet.
+//     Die Gerätestimme sagt sonst den Buchstabennamen („es“ statt /sss/), siehe Regel 2.
+//   - Silben, Wörter, Ansagen: je nach AUDIO.beiFehlender in config.js
+//       'stimme'     → Gerätestimme (Web Speech API), falls eine deutsche Stimme da ist
+//       'ausblenden' → kein Ton, Lautsprecher-Knopf ausgeblendet
+//
+// Alle sprich…-Funktionen liefern ein Promise, das nach dem Ende des Tons erfüllt ist – oder
+// sofort mit false, wenn es keinen Ton gibt. Module dürfen also darauf warten, ohne hängen zu bleiben.
 //
 // Lautsprecher-Knöpfe: Klasse „lautsprecher“ plus data-sprich-laut="m", data-sprich-silbe="ma",
 // data-sprich-wort="Rose" oder data-sprich-ansage="zurueck". Sie bleiben unsichtbar, bis feststeht,
 // dass es für sie einen Ton gibt (Klasse „ton-da“, siehe aktiviereSprechknoepfe).
 // Auch Elemente ohne Klasse „lautsprecher“ (z. B. Kacheln) sprechen beim Antippen, werden aber nie versteckt.
 
-import { AUDIO, graphem, leseEinstellungen } from './config.js';
+import { AUDIO, leseEinstellungen } from './config.js';
 import { ANSAGEN, datei } from './aufnahmen.js';
 
 const ORDNER = new URL('../assets/audio/', import.meta.url);
@@ -61,12 +68,12 @@ export function stoppe() {
 }
 
 // ---------------------------------------------------------------------------
-// Ersatzstimme (Web Speech API) – nur wenn AUDIO.beiFehlender === 'stimme'
+// Ersatzstimme (Web Speech API) – nur für Silben, Wörter, Ansagen und nur wenn AUDIO.beiFehlender === 'stimme'
 // ---------------------------------------------------------------------------
 const sprache = globalThis.speechSynthesis;
 let stimme = null;
 let tempo = leseEinstellungen().tempo / 100;
-const GESCHWINDIGKEIT = { laut: 0.6, silbe: 0.8, wort: 0.9, ansage: 0.9 };
+const GESCHWINDIGKEIT = { silbe: 0.8, wort: 0.9, ansage: 0.9 };
 
 function deutscheStimme(stimmen) {
   const de = stimmen.filter(s => s.lang.replace('_', '-').toLowerCase().startsWith('de'));
@@ -107,9 +114,10 @@ export function sprichMitStimme(text, grundtempo = GESCHWINDIGKEIT.wort) {
   });
 }
 
-/** Was die Ersatzstimme für art/wert sprechen würde, oder null (z. B. /t/: nie Buchstabenname). */
+/** Was die Ersatzstimme für art/wert sprechen würde, oder null = nie Ersatzstimme. */
 function ersatzText(art, wert) {
-  if (art === 'laut') return graphem(wert)?.sprechtext ?? null;
+  if (AUDIO.beiFehlender !== 'stimme') return null;
+  if (art === 'laut') return null; // Einzellaute nur aus Aufnahmen – nie Buchstabennamen
   if (art === 'silbe') return wert.toLowerCase();
   if (art === 'ansage') return ANSAGEN[wert] ?? null;
   return wert;
@@ -119,10 +127,10 @@ function ersatzText(art, wert) {
 // Öffentliche Schnittstelle
 // ---------------------------------------------------------------------------
 
-/** Gibt es für art/wert einen Ton (Aufnahme oder – je nach Einstellung – Ersatzstimme)? */
+/** Gibt es für art/wert einen Ton? Laute: nur mit Aufnahme. Sonst Aufnahme oder – je nach Einstellung – Ersatzstimme. */
 export async function kannSprechen(art, wert) {
   if (await hatAufnahme(art, wert)) return true;
-  return AUDIO.beiFehlender === 'stimme' && ersatzText(art, wert) !== null && await stimmeBereit;
+  return ersatzText(art, wert) !== null && await stimmeBereit;
 }
 
 /**
@@ -134,12 +142,12 @@ export async function sprich(art, wert) {
   let da = vorhanden.get(u);
   if (typeof da !== 'boolean') da = await hatAufnahme(art, wert);
   if (da && player && await spieleAufnahme(u)) return 'aufnahme';
-  if (AUDIO.beiFehlender !== 'stimme') return false;
   const text = ersatzText(art, wert);
   if (text === null || !(await stimmeBereit)) return false;
   return (await sprichMitStimme(text, GESCHWINDIGKEIT[art])) ? 'stimme' : false;
 }
 
+/** Laut gedehnt abspielen – nur aus Aufnahme; ohne Aufnahme still (Promise → false). */
 export const sprichLaut = id => sprich('laut', id);
 export const sprichSilbe = silbe => sprich('silbe', silbe.toLowerCase());
 export const sprichWort = wort => sprich('wort', wort);
