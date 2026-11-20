@@ -32,12 +32,13 @@
   <main>
     <h1>Testseite: lesbare Wörter je Buchstabenstand</h1>
     <p>Gelb = enthält den zuletzt eingeführten Buchstaben (wird bevorzugt). Gestrichelt = Sichtwort.
-      Wörter und Laute antippen zum Anhören (nur mit deutscher Stimme).
+      Wörter und Silben antippen zum Anhören (Aufnahme oder Gerätestimme); Laute nur mit Aufnahme.
       <span id="stimme"></span></p>
 
     <h2>Laute anhören (gedehnt)</h2>
-    <p>Ausgegraut = kein Ton (keine Aufnahme und keine passende Ersatzstimme). Welche Aufnahmen fehlen,
-      zeigt die <a href="aufnahmen.html">Aufnahmeliste</a>.</p>
+    <p>Laute erklingen nur aus eigenen Aufnahmen, nie über die Gerätestimme.
+      Ausgegraut = noch keine Aufnahme (in der App ist der Lautsprecher dort ausgeblendet).
+      Welche Aufnahmen fehlen, zeigt die <a href="aufnahmen.html">Aufnahmeliste</a>.</p>
     <div class="laute" id="laute"></div>
 
     <h2>Je Buchstabenstand</h2>
@@ -98,7 +99,7 @@
       <td>${graphemeAnzeige(w.grapheme)}</td><td>${standName(w.ab)}</td>
       <td>${w.art}</td><td>${w.bild ? 'ja' : ''}</td></tr>`).join('');
 
-    // Laute: Knopf aktiv, wenn es einen Ton gibt (Aufnahme oder, je nach config.js, Ersatzstimme)
+    // Laute: Knopf nur aktiv, wenn es die Aufnahme gibt (nie Gerätestimme)
     stimmeBereit.then(da => {
       document.getElementById('stimme').textContent = da
         ? '(Deutsche Gerätestimme gefunden.)' : '(Keine deutsche Gerätestimme – nur Aufnahmen.)';
