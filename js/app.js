@@ -34,13 +34,6 @@ const PFEIL_ZURUECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor
 
 const app = document.getElementById('app');
 
-// Fertige Module: Name (wie in config.js, STUFEN) → Datei in js/module/.
-// Jedes Modul exportiert starte(wurzel, { einstellungen, zurueck, stern }) und liefert stopp().
-const MODULE = {
-  'Leseapparat': './module/leseapparat.js',
-};
-let modulStopp = null; // gesetzt, solange ein Modul läuft
-
 function zeigeStart() {
   app.innerHTML = `
     <div class="kopf"><h1>Lese-App</h1></div>
@@ -62,11 +55,7 @@ function zeigeStufe(nr) {
       <h1>${stufe.nr} · ${stufe.titel}</h1>
     </div>
     <div class="kacheln">
-      ${stufe.module.map(m => MODULE[m] ? `
-        <button class="kachel" style="background:${stufe.farbe}" data-sprich-ansage="${modulAnsage(m)}"
-          data-modul="${m}" data-stufen-nr="${stufe.nr}">
-          <span class="titel">${m}</span>
-        </button>` : `
+      ${stufe.module.map(m => `
         <button class="kachel aus" style="background:${stufe.farbe}" data-sprich-ansage="${modulAnsage(m)}">
           <span class="titel">${m}</span>
           <span class="bald">kommt bald</span>
@@ -74,20 +63,7 @@ function zeigeStufe(nr) {
     </div>`;
 }
 
-async function starteModul(name, stufenNr) {
-  const { starte } = await import(MODULE[name]);
-  modulStopp = starte(app, {
-    einstellungen,
-    zurueck: () => { modulStopp = null; sprichAnsage('zurueck'); zeigeStufe(stufenNr); },
-    stern: () => { zustand.sterne[stufenNr - 1] = Math.min(7, zustand.sterne[stufenNr - 1] + 1); },
-  });
-}
-
 app.addEventListener('click', e => {
-  // Klicks im Modul behandelt das Modul selbst (auch den Zurück-Knopf, der beim Klick schon entfernt ist)
-  if (modulStopp || !app.contains(e.target)) return;
-  const modul = e.target.closest('[data-modul]');
-  if (modul) { starteModul(modul.dataset.modul, Number(modul.dataset.stufenNr)); return; }
   const kachel = e.target.closest('[data-stufe]');
   if (kachel) {
     const stufe = STUFEN[kachel.dataset.stufe - 1];

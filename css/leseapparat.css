@@ -133,6 +133,7 @@
   grid-row: 3;
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: 24px;
   margin-top: 8px;
 }
@@ -142,10 +143,9 @@
 .la-gross[aria-pressed="true"] { background: #dcebdc; border-color: #4f8a4f; }
 .la-spricht .la-hoeren { border-color: var(--punkt); }
 
-/* ---------- Kopf: Fortschritt ---------- */
-.la-kopf h1 { flex: 0 1 auto; }
-.la-kopf .la-anleitung svg { width: 40px; height: 40px; }
-.la-fortschritt { margin-left: auto; display: flex; align-items: center; gap: 20px; }
+/* ---------- Fortschritt (in der Knopfzeile unten) ---------- */
+.la-anleitung { font-weight: 600; }
+.la-fortschritt { margin-left: 24px; display: flex; align-items: center; gap: 20px; }
 .la-pips { display: flex; gap: 8px; }
 .la-pip { width: 18px; height: 18px; border-radius: 50%; border: 3px solid #d8c48a; }
 .la-pip.la-voll { background: var(--punkt); border-color: #a87b00; }

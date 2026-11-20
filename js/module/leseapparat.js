@@ -8,12 +8,15 @@
 //   'hoeren'  – erst vormachen, dann selbst lesen (Standard)
 //   'lesen'   – erst selbst lesen, dann zur Kontrolle anhören
 //
+// Links stehen nur Dehnlaute; nicht dehnbare Laute erst, wenn die Lehrkraft sie zuschaltet
+// (einstellungen.plosive, URL-Parameter p=1).
+//
 // Buchstaben nur aus dem Buchstabenstand (config.js), der neueste Buchstabe kommt häufiger vor.
 // Eigene Gestaltung; Idee „Leseapparat“ nach Ina Lehr, keine Übernahme der Vorlage.
 //
-// Schnittstelle (für app.js und test/leseapparat.html):
-//   starte(wurzel, { einstellungen, zurueck, stern }) → stopp()
-//     zurueck() wird beim Zurück-Knopf aufgerufen, stern() bei jedem neuen Stern.
+// Schnittstelle (gemeinsam für alle Module, Lader in app.js):
+//   starte(behaelter, { einstellungen, zustand, zurueck }) → stopp()
+//   Kopfzeile mit Zurück-Pfeil und Modulname baut app.js; stopp() räumt beim Verlassen auf.
 
 import { BUCHSTABEN, GEWICHT_NEUER_BUCHSTABE } from '../config.js';
 import { sprichLaut, sprichSilbe, stoppe } from '../audio.js';
@@ -31,8 +34,6 @@ const bogenPunkt = t => ({
 // Dauer der Punktbewegung je Laut in ms (bei Tempo 100 %)
 const DAUER = { dehnbar: 1300, kurz: 350, vokal: 1300 };
 
-const PFEIL_ZURUECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
-  stroke-linecap="round" stroke-linejoin="round"><path d="M15 4 L7 12 L15 20"/></svg>`;
 const PFEIL_HOCH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"
   stroke-linecap="round" stroke-linejoin="round"><path d="M5 15 L12 8 L19 15"/></svg>`;
 const PFEIL_RUNTER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"
@@ -67,7 +68,7 @@ function mische(liste) {
  * Gemischter Streifen; das neueste Graphem steht vorne und kommt bis zu
  * GEWICHT_NEUER_BUCHSTABE-mal vor, gleichmäßig verteilt (nie zweimal hintereinander).
  */
-export function baueStreifen(grapheme, neuId) {
+function baueStreifenEinmal(grapheme, neuId) {
   const rest = mische(grapheme.filter(b => b.id !== neuId));
   const neu = grapheme.find(b => b.id === neuId);
   if (!neu) return rest;
@@ -79,11 +80,40 @@ export function baueStreifen(grapheme, neuId) {
   return ergebnis.filter(Boolean);
 }
 
-/** Konsonanten (dürfen eine Silbe beginnen) und Vokale bis zum Buchstabenstand. */
-export function graphemeFuerStand(stand) {
+// Ähnlich klingende Laute sollen im Streifen nicht direkt nebeneinanderstehen
+// (NRW „Lesekompetenz gezielt fördern“, S. 71: z. B. /m/–/n/, stimmlos/stimmhaft wie /f/–/w/, /p/–/b/).
+// Vorschlag: später nach config.js verschieben, falls andere Module die Liste auch brauchen.
+const AEHNLICH = [['m', 'n'], ['f', 'w'], ['p', 'b'], ['t', 'd'], ['k', 'g']];
+const aehnlich = (a, b) => AEHNLICH.some(([x, y]) => (a === x && b === y) || (a === y && b === x));
+
+/** Stehen irgendwo zwei ähnliche Laute direkt nebeneinander (auch über das Streifenende hinweg)? */
+function hatAehnlicheNachbarn(streifen) {
+  return streifen.length > 2 &&
+    streifen.some((b, i) => aehnlich(b.id, streifen[(i + 1) % streifen.length].id));
+}
+
+/**
+ * Gemischter Streifen wie oben; ähnliche Laute möglichst nicht nebeneinander.
+ * Mischt dafür bis zu 50-mal neu; gelingt es nicht (sehr wenige Laute), bleibt der letzte Versuch.
+ */
+export function baueStreifen(grapheme, neuId) {
+  let streifen = baueStreifenEinmal(grapheme, neuId);
+  for (let versuch = 0; versuch < 50 && hatAehnlicheNachbarn(streifen); versuch++) {
+    streifen = baueStreifenEinmal(grapheme, neuId);
+  }
+  return streifen;
+}
+
+/**
+ * Konsonanten (dürfen eine Silbe beginnen) und Vokale bis zum Buchstabenstand.
+ * Ohne plosive nur Dehnlaute (m, l, s, f, n, r, w, h, sch, j …): Laute verbinden gelingt zuerst
+ * mit dehnbaren Lauten (Entscheidung Anna; NRW S. 66/71, LFplus S. 64/66).
+ * Mit plosive = true kommen die nicht dehnbaren dazu (t, k, p, d, g, b, z, st, pf, sp, qu).
+ */
+export function graphemeFuerStand(stand, plosive = false) {
   const eingefuehrt = BUCHSTABEN.slice(0, stand);
   return {
-    konsonanten: eingefuehrt.filter(b => b.typ !== 'vokal' && b.anfang),
+    konsonanten: eingefuehrt.filter(b => b.typ !== 'vokal' && b.anfang && (plosive || b.typ === 'dauerlaut')),
     vokale: eingefuehrt.filter(b => b.typ === 'vokal'),
     neu: eingefuehrt[eingefuehrt.length - 1],
   };
@@ -94,28 +124,23 @@ const grossAnfang = text => text[0].toUpperCase() + text.slice(1);
 // ---------------------------------------------------------------------------
 // Modul
 // ---------------------------------------------------------------------------
-export function starte(wurzel, { einstellungen, zurueck = () => {}, stern = () => {} } = {}) {
+// VORLÄUFIG: Die Sterne-Regel ist noch nicht entschieden. Das Modul zählt selbst gelesene Silben
+// und zeigt eigene Sterne an (SILBEN_JE_STERN Silben = 1 Stern), verändert zustand.sterne aber nicht.
+// Sobald die Regel feststeht, wird hier eingetragen, was mit dem Spielstand passiert.
+function sternVerdient(zustand) { // eslint-disable-line no-unused-vars
+  // z. B. später: zustand.sterne[2] = Math.min(7, zustand.sterne[2] + 1);  (Stufe 3)
+}
+
+export function starte(behaelter, { einstellungen, zustand } = {}) {
   ladeCss();
-  const { konsonanten, vokale, neu } = graphemeFuerStand(einstellungen.stand);
+  // einstellungen.plosive: Schalter der Lehrkraft (URL-Parameter p=1); fehlt er, nur Dehnlaute
+  const { konsonanten, vokale, neu } = graphemeFuerStand(einstellungen.stand, einstellungen.plosive === true);
   const tempo = einstellungen.tempo / 100;
 
-  wurzel.innerHTML = `
-    <div class="kopf la-kopf">
-      <button class="zurueck" aria-label="Zurück">${PFEIL_ZURUECK}</button>
-      <h1>Leseapparat</h1>
-      <button class="lautsprecher la-anleitung" data-sprich-ansage="leseapparat-anleitung"
-        aria-label="Anleitung anhören">${LAUTSPRECHER}</button>
-      <div class="la-fortschritt" aria-label="Fortschritt"></div>
-    </div>
-    <div class="la-hinweis" hidden>Für den Leseapparat braucht es mindestens einen Konsonanten
-      und einen Vokal. Bitte im Lehrkraft-Bereich den Buchstabenstand erhöhen.</div>`;
-  const zurueckKnopf = wurzel.querySelector('.zurueck');
-  let aufraeumen = () => {};
-  zurueckKnopf.addEventListener('click', () => { aufraeumen(); zurueck(); });
-
   if (!konsonanten.length || !vokale.length) {
-    wurzel.querySelector('.la-hinweis').hidden = false;
-    return aufraeumen;
+    behaelter.innerHTML = `<div class="la-hinweis">Für den Leseapparat braucht es mindestens einen
+      Konsonanten (Dehnlaut) und einen Vokal. Bitte im Lehrkraft-Bereich den Buchstabenstand erhöhen.</div>`;
+    return () => {};
   }
 
   const apparat = document.createElement('div');
@@ -148,11 +173,14 @@ export function starte(wurzel, { einstellungen, zurueck = () => {}, stern = () =
       </g>
     </svg>
     <div class="la-knoepfe">
+      <button class="lautsprecher la-anleitung" data-sprich-ansage="leseapparat-anleitung"
+        aria-label="Anleitung anhören">?</button>
       <button class="la-hoeren" aria-label="Vorlesen">${LAUTSPRECHER}</button>
       <button class="la-modus" aria-label="Ablauf wechseln"></button>
       <button class="la-gross" aria-pressed="false" aria-label="Großbuchstabe am Anfang">Aa</button>
+      <div class="la-fortschritt" aria-label="Fortschritt"></div>
     </div>`;
-  wurzel.append(apparat);
+  behaelter.replaceChildren(apparat);
 
   const fensterK = apparat.querySelector('.la-konsonant');
   const fensterV = apparat.querySelector('.la-vokal');
@@ -162,7 +190,7 @@ export function starte(wurzel, { einstellungen, zurueck = () => {}, stern = () =
   const silbeText = apparat.querySelector('.la-silbe');
   const modusKnopf = apparat.querySelector('.la-modus');
   const grossKnopf = apparat.querySelector('.la-gross');
-  const fortschritt = wurzel.querySelector('.la-fortschritt');
+  const fortschritt = apparat.querySelector('.la-fortschritt');
 
   // Zustand nur im Arbeitsspeicher
   const s = {
@@ -327,7 +355,7 @@ export function starte(wurzel, { einstellungen, zurueck = () => {}, stern = () =
         s.gelesen = 0;
         s.sterne++;
         neuerStern = true;
-        stern();
+        sternVerdient(zustand);
       }
       zeichneFortschritt(neuerStern);
     }
@@ -458,7 +486,7 @@ export function starte(wurzel, { einstellungen, zurueck = () => {}, stern = () =
   // Kein automatisches Vorlesen beim Start: der Modulname wird gerade angesagt.
   neueSilbe(false);
 
-  aufraeumen = stopp;
+  /** Aufräumen beim Verlassen (ruft app.js auf): Ton, Animation und Zeitgeber stoppen. */
   function stopp() {
     s.beendet = true;
     abbrechen();
