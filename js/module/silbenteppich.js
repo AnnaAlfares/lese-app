@@ -20,6 +20,11 @@ const MAX_ZEILEN = 5;            // Konsonant-Zeilen im geordneten Teppich
 const MAX_SPALTEN = 5;           // Vokal-Spalten im geordneten Teppich / Silben je Zeile gemischt
 const MAX_FELDER_GEMISCHT = 30;  // höchstens 6 Zeilen × 5 Silben
 const MINUTE_MS = 60_000;
+// Eine Silbe zählt (für Sterne) nur, wenn das Kind nicht schneller als nach dieser Zeit weitertippt.
+// Sterne-Regel von Anna: ca. 0,5 s; schnelles Durchtippen ohne Lesen zählt nicht.
+const MINDESTZEIT_MS = 500;
+// Grundvokale stehen im geordneten Teppich immer als Spalten da (Entscheidung Anna)
+const GRUNDVOKALE = ['a', 'e', 'i', 'o', 'u'];
 // Reihenfolge der Vokal-Spalten wie auf dem Arbeitsblatt (A E I O U), weitere Vokale danach
 const VOKAL_FOLGE = ['a', 'e', 'i', 'o', 'u', 'ei', 'au', 'eu', 'ie', 'ä', 'ö', 'ü'];
 
@@ -28,7 +33,8 @@ const VOKAL_FOLGE = ['a', 'e', 'i', 'o', 'u', 'ei', 'au', 'eu', 'ie', 'ä', 'ö'
 const REKORDE = new Map();
 
 // Auswahl bleibt erhalten, solange die Seite offen ist (z. B. nach „Zurück“)
-const wahl = { schreibung: 'gross', farben: null, aufbau: 'geordnet', nummer: 1 };
+// Voreinstellung „gemischt“ (Entscheidung Anna): geordnete Teppiche kann man bei Zeitläufen auswendig aufsagen.
+const wahl = { schreibung: 'gross', farben: null, aufbau: 'gemischt', nummer: 1 };
 
 // ---------------------------------------------------------------------------
 // Zufall mit Startwert: Derselbe Teppich (gleiche Nummer) sieht immer gleich aus,
@@ -59,6 +65,18 @@ function auswahl(liste, max, neuesteId, rnd) {
   const neu = liste.filter(b => b.id === neuesteId);
   const rest = mische(liste.filter(b => b.id !== neuesteId), rnd);
   return [...neu, ...rest.slice(0, max - neu.length)];
+}
+
+/**
+ * Vokal-Spalten im geordneten Teppich: alle eingeführten Grundvokale (a e i o u), dazu der neueste
+ * Vokal; bleibt Platz bis MAX_SPALTEN, kommen weitere Vokale (ei, au, …) zufällig dazu.
+ * Dadurch können es höchstens 6 Spalten werden (5 Grundvokale + neuester).
+ */
+function vokalSpalten(vokale, neuesteId, rnd) {
+  const grund = vokale.filter(b => GRUNDVOKALE.includes(b.id));
+  const neu = vokale.filter(b => b.id === neuesteId && !grund.includes(b));
+  const rest = mische(vokale.filter(b => !grund.includes(b) && !neu.includes(b)), rnd);
+  return [...grund, ...neu, ...rest].slice(0, Math.max(MAX_SPALTEN, grund.length + neu.length));
 }
 
 // ---------------------------------------------------------------------------
@@ -96,7 +114,7 @@ export function baueTeppich(stand, aufbau, nummer) {
 
   // geordnet: Vokalzeile oben, dann je Konsonant: Laut, danach die Silben mit allen Vokalen
   const eingefuehrt = BUCHSTABEN.slice(0, stand);
-  const vokale = auswahl(eingefuehrt.filter(b => b.typ === 'vokal'), MAX_SPALTEN, neuesteId, rnd)
+  const vokale = vokalSpalten(eingefuehrt.filter(b => b.typ === 'vokal'), neuesteId, rnd)
     .sort((a, b) => VOKAL_FOLGE.indexOf(a.id) - VOKAL_FOLGE.indexOf(b.id));
   const konsonanten = auswahl(eingefuehrt.filter(b => b.typ !== 'vokal' && b.anfang), MAX_ZEILEN, neuesteId, rnd)
     .sort((a, b) => eingefuehrt.indexOf(a) - eingefuehrt.indexOf(b));
@@ -261,6 +279,9 @@ export function starte(wurzel, { einstellungen }) {
     let fertig = false;
     let startZeit = 0;
     let takt = null;
+    let aktuellSeit = performance.now(); // seit wann die aktuelle Silbe hervorgehoben ist
+    const gezaehlt = new Set();          // in diesem Durchgang schon gezählte Felder (kein Doppeltzählen nach ↶)
+    wurzel.dataset.gezaehlt = 0;         // für Testseite/Tests: gezählte Silben in diesem Lauf
 
     let n = 0;
     const spalten = Math.max(...zeilen.map(z => z.length));
@@ -307,7 +328,7 @@ export function starte(wurzel, { einstellungen }) {
 
     function start() {
       laeuft = true;
-      startZeit = performance.now();
+      startZeit = aktuellSeit = performance.now();
       $('.st-teppich').classList.remove('verdeckt');
       $('.st-start').remove();
       takt = setInterval(tick, 200);
@@ -327,16 +348,32 @@ export function starte(wurzel, { einstellungen }) {
 
     function weiter() {
       if (!laeuft || fertig) return;
+      const jetzt = performance.now();
+      // Nur eine Silbe (kein einzelner Laut der geordneten Ansicht) zählt, und nur, wenn das Kind
+      // nicht schneller als MINDESTZEIT_MS weitergetippt hat.
+      if (felder[i].art === 'silbe' && jetzt - aktuellSeit >= MINDESTZEIT_MS && !gezaehlt.has(i)) {
+        gezaehlt.add(i);
+        silbeGelesen();
+      }
+      aktuellSeit = jetzt;
       gelesen++;
       if (modus === 'minute') $('.st-zaehler').textContent = gelesen;
       if (i < felder.length - 1) { i++; markiere(); return; }
-      if (modus === 'minute') { i = 0; markiere(); return; } // Teppich zu Ende: oben weiterlesen
+      if (modus === 'minute') { i = 0; gezaehlt.clear(); markiere(); return; } // Teppich zu Ende: oben weiterlesen
       beende();
+    }
+
+    // >>> STERNE: Hier wird eine wirklich gelesene Silbe gezählt (Einheit für die Stufen-Sterne:
+    // 10 Einheiten = 1 Stern, ein Zähler je Stufe). Sobald js/sterne.js (Thread 2) da ist,
+    // hier dessen Zählfunktion für Stufe 4 aufrufen. Bis dahin wird zustand.sterne nicht verändert.
+    function silbeGelesen() {
+      wurzel.dataset.gezaehlt = Number(wurzel.dataset.gezaehlt) + 1;
     }
 
     function schrittZurueck() {
       if (!laeuft || fertig || i === 0) return;
       i--;
+      aktuellSeit = performance.now();
       gelesen = Math.max(0, gelesen - 1);
       if (modus === 'minute') $('.st-zaehler').textContent = gelesen;
       markiere();
