@@ -13,6 +13,8 @@
 // - Ohne Zeit: Runde mit 10 Wörtern, ein Stern pro richtigem Wort.
 //   Zeitmodus (nur wenn im Lehrkraft-Bereich an): 1 Minute, gezählt werden richtige Wörter pro Minute,
 //   eigener Rekord nur im Arbeitsspeicher.
+// - Schnittstelle: siehe js/module/README.md. zustand.sterne (Sterne der Stufe) wird bewusst NICHT
+//   verändert, solange die Sterne-Regel nicht entschieden ist; die Sterne einer Runde sind nur Anzeige.
 
 import { lesbareWoerter, sichtwoerter, waehle } from '../woerter.js';
 import { hatBild, bildHtml, woerterMitBild } from '../bilder.js';
@@ -130,7 +132,7 @@ function rundenListe(vorrat) {
 // ---------------------------------------------------------------------------
 // Modul
 // ---------------------------------------------------------------------------
-export function starte(behaelter, { einstellungen: e, zustand }) {
+export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
   ladeCss();
   const merk = (zustand.blitzlesen ??= { blitzzeit: BLITZ_START, rekord: 0 });
   const material = baueVorrat(e);

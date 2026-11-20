@@ -70,13 +70,15 @@ function zeigeStufe(nr) {
 }
 
 // ---------------------------------------------------------------------------
-// Module: Datei js/module/<name>.js (Name wie bei Aufnahmen: „Wort-Fang“ → wort-fang.js).
-// Ein Modul exportiert starte(behaelter, { einstellungen, zustand }) und gibt eine
-// Aufräum-Funktion zurück (Zeitgeber stoppen …), die beim Zurück-Tippen aufgerufen wird.
+// Module werden automatisch eingetragen: Datei js/module/<dateiStamm(name)>.js
+// („Wort-Fang“ → wort-fang.js). Gibt es die Datei, wird die Kachel aktiv.
+// Schnittstelle: starte(behaelter, { einstellungen, zustand, zurueck }) → optional Aufräum-Funktion.
+// Genaue Beschreibung: js/module/README.md
 // ---------------------------------------------------------------------------
 const modulUrl = name => new URL(`./module/${dateiStamm(name)}.js`, import.meta.url).href;
 let beendeModul = null;
 let aktuelleStufe = null;
+let aktivesModul = null; // Kennung des angezeigten Moduls (gegen verspätete zurueck()-Aufrufe)
 
 async function zeigeModul(name, stufenNr) {
   let modul;
@@ -88,7 +90,25 @@ async function zeigeModul(name, stufenNr) {
       <h1>${name}</h1>
     </div>
     <div class="modul"></div>`;
-  beendeModul = modul.starte(app.querySelector('.modul'), { einstellungen, zustand }) ?? null;
+  const meinModul = {};
+  aktivesModul = meinModul;
+  // zurueck(): das Modul kehrt selbst zur Stufe zurück (wirkt nur, solange es noch angezeigt wird)
+  const zurueck = () => { if (aktivesModul === meinModul) verlasseModul(); };
+  const aufraeumen = modul.starte(app.querySelector('.modul'), { einstellungen, zustand, zurueck });
+  const fn = typeof aufraeumen === 'function' ? aufraeumen : null;
+  if (aktivesModul === meinModul) beendeModul = fn;
+  else fn?.(); // zurueck() wurde schon während starte() aufgerufen
+}
+
+/** Modul aufräumen und zur Stufe zurückkehren. */
+function verlasseModul() {
+  const aufraeumen = beendeModul;
+  const nr = aktuelleStufe;
+  beendeModul = null;
+  aktuelleStufe = null;
+  aktivesModul = null;
+  try { aufraeumen?.(); } catch (fehler) { console.error(fehler); }
+  zeigeStufe(nr);
 }
 
 app.addEventListener('click', e => {
@@ -106,12 +126,8 @@ app.addEventListener('click', e => {
   }
   if (e.target.closest('.zurueck')) {
     sprichAnsage('zurueck');
-    if (beendeModul || aktuelleStufe) {
-      beendeModul?.();
-      beendeModul = null;
-      const nr = aktuelleStufe;
-      aktuelleStufe = null;
-      zeigeStufe(nr);
+    if (aktuelleStufe) {
+      verlasseModul();
     } else {
       zeigeStart();
     }
