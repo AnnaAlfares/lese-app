@@ -2,8 +2,7 @@
    Ruhig: ein Teppich, eine hervorgehobene Silbe. Schriftgröße passt sich an Zeilen/Spalten an,
    damit der ganze Teppich ohne Scrollen auf iPad (1180 × 820) und Digiboard (1920 × 1080) passt. */
 
-.modul .kopf h1 { flex: 1; }
-.st-zurueck svg, .st-schritt svg, .modul .lautsprecher svg { width: 40px; height: 40px; }
+.st-auswahl svg, .st-schritt svg, .st-leiste .lautsprecher svg { width: 40px; height: 40px; }
 
 /* ---------- Auswahl ---------- */
 .st-optionen { display: flex; flex-wrap: wrap; gap: 32px; justify-content: center; margin: 8px 0 24px; }
@@ -16,7 +15,7 @@
 .st-modi .kachel { background: #eadcf2; }
 
 /* ---------- Lesen ---------- */
-.st-leiste { margin-bottom: 12px; }
+.st-leiste { display: flex; align-items: center; gap: 24px; margin-bottom: 12px; }
 .st-anzeige { flex: 1; display: flex; align-items: center; gap: 24px; font-size: 40px; font-variant-numeric: tabular-nums; }
 .st-uhr { min-width: 3.2em; }
 .st-balken { width: 260px; height: 24px; border-radius: 12px; background: #e6e0d4; overflow: hidden; }
@@ -28,8 +27,8 @@
 .st-flaeche { position: relative; }
 
 .st-teppich {
-  /* Platz für Kopfleiste, Ränder und Fußzeile abziehen, dann je Zeile/Spalte teilen */
-  --groesse: clamp(32px, min(calc((100vh - 270px) / var(--zeilen) * 0.5),
+  /* Platz für Kopfzeile von app.js, eigene Leiste, Ränder und Fußzeile abziehen, dann je Zeile/Spalte teilen */
+  --groesse: clamp(32px, min(calc((100vh - 340px) / var(--zeilen) * 0.5),
                              calc((100vw - 140px) / var(--spalten) * 0.26)), 110px);
   display: flex;
   flex-direction: column;

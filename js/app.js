@@ -34,12 +34,6 @@ const PFEIL_ZURUECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor
 
 const app = document.getElementById('app');
 
-// Fertige Module: Name (wie in STUFEN) → Datei in js/module/. Wird erst beim Antippen geladen.
-// Jedes Modul exportiert starte(wurzel, { einstellungen, zurueck }).
-const MODULE = {
-  'Silbenteppich': './module/silbenteppich.js',
-};
-
 function zeigeStart() {
   app.innerHTML = `
     <div class="kopf"><h1>Lese-App</h1></div>
@@ -55,17 +49,13 @@ function zeigeStart() {
 
 function zeigeStufe(nr) {
   const stufe = STUFEN[nr - 1];
-  app.dataset.stufe = nr;
   app.innerHTML = `
     <div class="kopf">
       <button class="zurueck" aria-label="Zurück">${PFEIL_ZURUECK}</button>
       <h1>${stufe.nr} · ${stufe.titel}</h1>
     </div>
     <div class="kacheln">
-      ${stufe.module.map(m => MODULE[m] ? `
-        <button class="kachel" style="background:${stufe.farbe}" data-modul="${m}" data-sprich-ansage="${modulAnsage(m)}">
-          <span class="titel">${m}</span>
-        </button>` : `
+      ${stufe.module.map(m => `
         <button class="kachel aus" style="background:${stufe.farbe}" data-sprich-ansage="${modulAnsage(m)}">
           <span class="titel">${m}</span>
           <span class="bald">kommt bald</span>
@@ -73,19 +63,7 @@ function zeigeStufe(nr) {
     </div>`;
 }
 
-async function zeigeModul(name, stufeNr) {
-  const modul = await import(MODULE[name]);
-  app.innerHTML = '<div class="modul"></div>';
-  modul.starte(app.firstElementChild, { einstellungen, zurueck: () => zeigeStufe(stufeNr) });
-}
-
 app.addEventListener('click', e => {
-  if (e.target.closest('.modul')) return; // Module behandeln ihre Klicks selbst
-  const modulKachel = e.target.closest('[data-modul]');
-  if (modulKachel) {
-    zeigeModul(modulKachel.dataset.modul, Number(app.dataset.stufe));
-    return;
-  }
   const kachel = e.target.closest('[data-stufe]');
   if (kachel) {
     const stufe = STUFEN[kachel.dataset.stufe - 1];

@@ -141,8 +141,9 @@ const zeitText = ms => {
 
 // Eigene, einfache Symbole (inline SVG)
 const SYMBOL = {
-  zurueck: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"
-    stroke-linejoin="round"><path d="M15 4 L7 12 L15 20"/></svg>`,
+  auswahl: `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="2"/>
+    <rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/>
+    <rect x="13" y="13" width="8" height="8" rx="2"/></svg>`,
   lautsprecher: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9h4l5-4v14l-5-4H3z"/>
     <path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2"
     stroke-linecap="round"/></svg>`,
@@ -167,7 +168,7 @@ const SYMBOL = {
 
 // Modul-CSS einmal laden (eigene Datei, damit app.css unverändert bleibt)
 function ladeCSS() {
-  const href = new URL('../../css/module/silbenteppich.css', import.meta.url).href;
+  const href = new URL('../../css/silbenteppich.css', import.meta.url).href;
   if (document.querySelector(`link[href="${href}"]`)) return;
   const link = document.createElement('link');
   link.rel = 'stylesheet';
@@ -179,21 +180,18 @@ function ladeCSS() {
 // Einstieg
 // ---------------------------------------------------------------------------
 /**
- * Startet den Silbenteppich in wurzel.
- * @param {HTMLElement} wurzel
- * @param {{einstellungen: object, zurueck: () => void}} optionen
+ * Startet den Silbenteppich (gemeinsame Modul-Schnittstelle, siehe js/module/README.md).
+ * Kopfzeile mit Zurück-Pfeil und Modulname baut app.js; zurück zur Stufe geht es dort.
+ * @param {HTMLElement} wurzel Behälter, in den das Modul zeichnet
+ * @param {{einstellungen: object, zustand?: object, zurueck?: () => void}} optionen
+ *   zustand (Sterne) wird hier bewusst nicht verändert – die Sterne-Regel ist noch offen.
+ * @returns {() => void} Aufräum-Funktion: Zeitgeber und Ton stoppen
  */
-export function starte(wurzel, { einstellungen, zurueck }) {
+export function starte(wurzel, { einstellungen }) {
   ladeCSS();
   const { stand, hilfen } = einstellungen;
   if (wahl.farben === null) wahl.farben = hilfen.farben; // Vorgabe der Lehrkraft
   let aufraeumen = () => {};
-
-  function verlasse(ziel) {
-    aufraeumen();
-    stoppe();
-    ziel();
-  }
 
   // ----- Auswahl: Modus und Darstellung -----
   function zeigeAuswahl() {
@@ -204,11 +202,6 @@ export function starte(wurzel, { einstellungen, zurueck }) {
     const beispiel = (a, b) => wahl.farben
       ? `<span class="blau">${a}</span><span class="rot">${b}</span>` : `${a}${b}`;
     wurzel.innerHTML = `
-      <div class="kopf">
-        <button class="st-zurueck" aria-label="Zurück">${SYMBOL.zurueck}</button>
-        <h1>Silbenteppich</h1>
-        <button class="lautsprecher st-titel" aria-label="Vorlesen">${SYMBOL.lautsprecher}</button>
-      </div>
       <div class="st-optionen">
         <div class="st-gruppe">
           ${knopf('schreibung', 'gross', 'MA', 'groß')}
@@ -232,13 +225,10 @@ export function starte(wurzel, { einstellungen, zurueck }) {
         <button class="kachel" data-modus="stoppen" data-ansage="zeit-stoppen">
           ${SYMBOL.stoppuhr}<span class="titel">Zeit stoppen</span></button>` : ''}
       </div>`;
-    zeigeLautsprecher(wurzel.querySelector('.st-titel'), 'ansage', 'modul-silbenteppich');
 
     wurzel.onclick = e => {
       const z = e.target.closest('button');
       if (!z) return;
-      if (z.matches('.st-zurueck')) return verlasse(zurueck);
-      if (z.matches('.st-titel')) return sprichAnsage('modul-silbenteppich');
       if (z.dataset.schreibung) wahl.schreibung = z.dataset.schreibung;
       else if (z.matches('[data-farben]')) wahl.farben = !wahl.farben;
       else if (z.dataset.aufbau) wahl.aufbau = z.dataset.aufbau;
@@ -260,11 +250,8 @@ export function starte(wurzel, { einstellungen, zurueck }) {
     const h = { farben: wahl.farben, koenig: hilfen.koenig };
 
     if (!felder.length) {
-      wurzel.innerHTML = `
-        <div class="kopf"><button class="st-zurueck" aria-label="Zurück">${SYMBOL.zurueck}</button>
-          <h1>Silbenteppich</h1></div>
-        <p class="st-hinweis">Mit den bisherigen Buchstaben gibt es noch keine Silben.</p>`;
-      wurzel.onclick = e => { if (e.target.closest('.st-zurueck')) zeigeAuswahl(); };
+      wurzel.innerHTML = '<p class="st-hinweis">Mit den bisherigen Buchstaben gibt es noch keine Silben.</p>';
+      wurzel.onclick = null;
       return;
     }
 
@@ -278,8 +265,8 @@ export function starte(wurzel, { einstellungen, zurueck }) {
     let n = 0;
     const spalten = Math.max(...zeilen.map(z => z.length));
     wurzel.innerHTML = `
-      <div class="kopf st-leiste">
-        <button class="st-zurueck" aria-label="Zurück">${SYMBOL.zurueck}</button>
+      <div class="st-leiste">
+        <button class="st-auswahl" aria-label="Andere Übungsart wählen">${SYMBOL.auswahl}</button>
         <div class="st-anzeige">${zeit ? `
           <span class="st-uhr">${modus === 'minute' ? '1:00' : '0:00'}</span>
           ${modus === 'minute' ? '<span class="st-balken"><span></span></span><span class="st-zaehler">0</span>' : ''}`
@@ -384,6 +371,7 @@ export function starte(wurzel, { einstellungen, zurueck }) {
         <div class="st-knoepfe">
           <button data-aktion="nochmal" aria-label="Noch einmal">↻</button>
           <button data-aktion="neu" aria-label="Neuer Teppich">${SYMBOL.teppich}</button>
+          <button data-aktion="auswahl" aria-label="Andere Übungsart wählen">${SYMBOL.auswahl}</button>
         </div>`;
       ende.hidden = false;
       ende.classList.toggle('rekord', neuerRekord);
@@ -391,12 +379,13 @@ export function starte(wurzel, { einstellungen, zurueck }) {
     }
 
     wurzel.onclick = e => {
-      if (e.target.closest('.st-zurueck')) return zeigeAuswahl();
+      if (e.target.closest('.st-auswahl')) return zeigeAuswahl();
       if (e.target.closest('.st-start')) return start();
       if (e.target.closest('.st-schritt')) return schrittZurueck();
       if (e.target.closest('.st-vorlesen')) return sprich(felder[i].art, felder[i].wert);
       const aktion = e.target.closest('[data-aktion]')?.dataset.aktion;
       if (aktion === 'nochmal') { sprichAnsage('noch-einmal'); return zeigeTeppich(modus); }
+      if (aktion === 'auswahl') return zeigeAuswahl();
       if (aktion === 'neu') { sprichAnsage('neuer-teppich'); wahl.nummer++; return zeigeTeppich(modus); }
       if (e.target.closest('.st-teppich')) weiter(); // Antippen irgendwo auf dem Teppich: nächste Silbe
     };
@@ -405,6 +394,13 @@ export function starte(wurzel, { einstellungen, zurueck }) {
   }
 
   zeigeAuswahl();
+
+  // Aufräumen beim Verlassen (ruft app.js auf): Zeitgeber, laufender Ton, Klick-Handler
+  return () => {
+    aufraeumen();
+    stoppe();
+    wurzel.onclick = null;
+  };
 }
 
 /** Lautsprecher nur zeigen, wenn es für art/wert einen Ton gibt (Aufnahme oder Ersatzstimme). */
