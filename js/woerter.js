@@ -2,7 +2,7 @@
 // und die Funktionen, die zu einem Buchstabenstand alles Lesbare liefern.
 // Module holen ihre Wörter nur von hier, nie aus eigenen Listen.
 
-import { BUCHSTABEN, GEWICHT_NEUER_BUCHSTABE, position } from './config.js';
+import { BUCHSTABEN, GEWICHT_NEUER_BUCHSTABE, NICHT_BASISGRAPHEME, VOKALE_NACH_QU, graphem, position } from './config.js';
 
 // ---------------------------------------------------------------------------
 // Wortliste
@@ -215,6 +215,29 @@ export function zerlege(silbenText) {
   return ergebnis;
 }
 
+// ---------------------------------------------------------------------------
+// Aussortieren: nicht lauttreue Silben und Wörter
+// ---------------------------------------------------------------------------
+// Eine Silbe oder ein Wort wird NIE angeboten (bei keinem Buchstabenstand), wenn
+//   1. ein Nicht-Basisgraphem darin vorkommt (v, c, y, ß, ie – siehe NICHT_BASISGRAPHEME in config.js),
+//      weil sich seine Schreibung nicht aus dem Laut ableiten lässt (NRW-Handreichung S. 70, 98), oder
+//   2. „qu“ vor einem Vokal steht, vor dem es im Deutschen nicht vorkommt (quu, queu, quau, quei, quö, qü),
+//      siehe VOKALE_NACH_QU in config.js.
+// Was aussortiert wurde, zeigt test/woerter.html (Funktion aussortiert()).
+
+/** Grund, warum eine Graphemfolge aussortiert wird, oder null, wenn sie lauttreu ist. */
+export function aussortierGrund(grapheme) {
+  const fremd = grapheme.find(gr => NICHT_BASISGRAPHEME.has(gr.id));
+  if (fremd) return `kein Basisgraphem: ${fremd.id}`;
+  for (let i = 0; i < grapheme.length - 1; i++) {
+    const naechstes = grapheme[i + 1].id;
+    if (grapheme[i].id === 'qu' && graphem(naechstes)?.typ === 'vokal' && !VOKALE_NACH_QU.has(naechstes)) {
+      return `qu vor ${naechstes}`;
+    }
+  }
+  return null;
+}
+
 /** Buchstabenstand, ab dem eine Graphemfolge lesbar ist (Infinity = nie, unbekanntes Zeichen). */
 function lesbarAb(grapheme) {
   return Math.max(...grapheme.map(gr => position(gr.id)));
@@ -223,11 +246,14 @@ function lesbarAb(grapheme) {
 // Wortliste einmal aufbereiten
 const WOERTER = WORTLISTE.map(([silbenText, art, bild], rang) => {
   const grapheme = zerlege(silbenText);
+  const grund = aussortierGrund(grapheme);
   return Object.freeze({
     wort: silbenText.replaceAll('-', ''),
     silben: silbenText.split('-'),
     art, bild, rang, grapheme,
-    ab: lesbarAb(grapheme),
+    ab: grund ? Infinity : lesbarAb(grapheme), // aussortiert = nie lesbar
+    erlesbarAb: lesbarAb(grapheme),
+    aussortiert: grund,
   });
 });
 const NACH_WORT = new Map(WOERTER.map(w => [w.wort, w]));
@@ -263,16 +289,31 @@ export function lesbareWoerter(stand) {
  * Silben mit dem neuesten Buchstaben stehen vorne (neu = true).
  */
 export function lesbareSilben(stand) {
+  const silben = new Map();
+
+  for (const s of alleSilben(stand)) {
+    if (!s.aussortiert) silben.set(s.text, s);
+  }
+  return [...silben.values()]
+    .map(s => ({ ...s, neu: s.ab === stand }))
+    .sort((a, b) => (b.neu - a.neu) || (a.art === b.art ? 0 : a.art === 'offen' ? -1 : 1));
+}
+
+/**
+ * Alle Silbenkandidaten bei einem Stand – auch aussortierte (Feld aussortiert = Grund oder null):
+ * offene Silben Konsonant + Vokal aus den eingeführten Graphemen und die Silben der lesbaren Wörter.
+ */
+function alleSilben(stand) {
   const eingefuehrt = BUCHSTABEN.slice(0, stand);
   const konsonanten = eingefuehrt.filter(b => b.typ !== 'vokal' && b.anfang);
   const vokale = eingefuehrt.filter(b => b.typ === 'vokal');
   const silben = new Map();
-
   for (const k of konsonanten) {
     for (const v of vokale) {
       const text = k.id + v.id;
-      silben.set(text, { text, grapheme: [{ id: k.id, text: k.id }, { id: v.id, text: v.id }],
-        art: 'offen', ab: Math.max(position(k.id), position(v.id)) });
+      const grapheme = [{ id: k.id, text: k.id }, { id: v.id, text: v.id }];
+      silben.set(text, { text, grapheme, art: 'offen', ab: Math.max(position(k.id), position(v.id)),
+        aussortiert: aussortierGrund(grapheme) });
     }
   }
   for (const w of WOERTER) {
@@ -281,12 +322,21 @@ export function lesbareSilben(stand) {
       const text = s.toLowerCase();
       if (silben.has(text)) continue;
       const grapheme = zerlege(text);
-      silben.set(text, { text, grapheme, art: 'wort', ab: lesbarAb(grapheme) });
+      silben.set(text, { text, grapheme, art: 'wort', ab: lesbarAb(grapheme), aussortiert: aussortierGrund(grapheme) });
     }
   }
-  return [...silben.values()]
-    .map(s => ({ ...s, neu: s.ab === stand }))
-    .sort((a, b) => (b.neu - a.neu) || (a.art === b.art ? 0 : a.art === 'offen' ? -1 : 1));
+  return [...silben.values()];
+}
+
+/**
+ * Was bei diesem Stand aussortiert wird, obwohl alle Buchstaben eingeführt sind (für die Testseite).
+ * @returns {{silben: {text, aussortiert}[], woerter: {wort, aussortiert}[]}}
+ */
+export function aussortiert(stand) {
+  return {
+    silben: alleSilben(stand).filter(s => s.aussortiert),
+    woerter: WOERTER.filter(w => w.aussortiert && w.erlesbarAb <= stand),
+  };
 }
 
 /**
@@ -302,7 +352,7 @@ export function lesbareSilben(stand) {
 export function sichtwoerter(stand) {
   return SICHTWOERTER.map(wort => {
     const grapheme = zerlege(wort);
-    const erlesbarAb = lesbarAb(grapheme);
+    const erlesbarAb = aussortierGrund(grapheme) ? Infinity : lesbarAb(grapheme);
     const ab = Math.min(erlesbarAb, FRUEHE_SICHTWOERTER[wort] ?? Infinity);
     return {
       wort, grapheme, ab, erlesbarAb,
@@ -372,7 +422,8 @@ export function pruefeWortliste() {
   for (const w of WOERTER) {
     if (gesehen.has(w.wort)) hinweise.push({ wort: w.wort, text: 'doppelt in der Liste' });
     gesehen.add(w.wort);
-    if (w.ab === Infinity) hinweise.push({ wort: w.wort, text: 'enthält ein unbekanntes Zeichen' });
+    if (w.erlesbarAb === Infinity) hinweise.push({ wort: w.wort, text: 'enthält ein unbekanntes Zeichen' });
+    if (w.aussortiert) hinweise.push({ wort: w.wort, text: `aussortiert (${w.aussortiert}) – erscheint nie` });
     for (const [muster, text] of VERDAECHTIG) {
       if (muster.test(w.wort)) hinweise.push({ wort: w.wort, text });
     }
