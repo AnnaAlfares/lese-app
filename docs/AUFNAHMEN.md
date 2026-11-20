@@ -6,6 +6,11 @@ Die **vollständige, immer aktuelle Liste** mit Dateinamen, Sprechtext und Statu
 wählen, damit nur das aufgenommen wird, was gerade gebraucht wird. „fehlende als Text kopieren“ liefert eine
 Tabelle zum Abhaken.
 
+**Laute zuerst:** Einzellaute (Konsonanten und Vokale) erklingen nur aus diesen Aufnahmen. Fehlt eine,
+bleibt es still und der Lautsprecher ist ausgeblendet – die Gerätestimme würde sonst Buchstabennamen sagen
+(„es“ statt /sss/). Silben, Wörter und Ansagen spricht bis zur Aufnahme ersatzweise die Gerätestimme
+(Einstellung `AUDIO.beiFehlender` in `js/config.js`).
+
 Die Dateinamen legt `js/aufnahmen.js` fest. Neue Ansagen von Modulen werden dort eingetragen.
 
 ## Ordner und Dateinamen
@@ -51,8 +56,8 @@ Silbenlesen spricht. Nicht gedehnt.
 
 ## Reihenfolge beim Aufnehmen
 
-1. Ansagen (Stufen, Modulnamen, Zahlen 1–16) und die Bildercode-Bilder – die braucht die Startseite.
-2. Laute und Silben bis zum aktuellen Buchstabenstand.
+1. Laute bis zum aktuellen Buchstabenstand – ohne sie bleiben die Einzellaute (z. B. im Leseapparat und beim Rutschen) stumm.
+2. Ansagen (Stufen, Modulnamen, Zahlen 1–16), die Bildercode-Bilder und Silben bis zum aktuellen Buchstabenstand.
 3. Wörter bis zum aktuellen Buchstabenstand.
 4. Mit jedem neuen Buchstaben: auf `test/aufnahmen.html` den Stand höher stellen und „nur fehlende“ wählen.
 
