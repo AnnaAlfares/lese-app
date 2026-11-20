@@ -110,11 +110,12 @@ export const STUFEN = Object.freeze([
 // ---------------------------------------------------------------------------
 // Einstellungen der Lehrkraft – nur als URL-Parameter
 // ---------------------------------------------------------------------------
-// Beispiel: index.html?b=12&h=bfi&z=1&t=80
+// Beispiel: index.html?b=12&h=bfi&z=1&t=80&p=0
 //   b  Buchstabenstand (1–41): so viele Grapheme der Reihenfolge sind eingeführt
 //   h  Hilfen als Kürzel (siehe HILFEN), „0“ = keine Hilfen
-//   z  Zeitmodus 1 = an, 0 = aus
+//   z  Zeitmodus 1 = an, 0 = aus (Standard: aus – die Lehrkraft schaltet ihn ein)
 //   t  Sprechtempo in Prozent (50–150)
+//   p  Plosive (t, k, p …) im Leseapparat: 1 = ja, 0 = nein (Standard: nein, nur dehnbare Laute)
 
 export const HILFEN = Object.freeze([
   { id: 'boegen',   kuerzel: 'b', titel: 'Silbenbögen' },
@@ -127,8 +128,9 @@ export const HILFEN = Object.freeze([
 export const STANDARD = Object.freeze({
   stand: 12,                                   // O bis U
   hilfen: ['boegen', 'farben', 'bilder'],
-  zeitmodus: true,
+  zeitmodus: false,                            // Lehrkraft schaltet ein
   tempo: 80,
+  plosive: false,                              // Leseapparat: nur dehnbare Laute
 });
 
 const begrenze = (zahl, min, max, ersatz) =>
@@ -141,6 +143,7 @@ export function leseEinstellungen(query = globalThis.location?.search ?? '') {
     stand: begrenze(parseInt(p.get('b'), 10), 1, ANZAHL_BUCHSTABEN, STANDARD.stand),
     zeitmodus: p.has('z') ? p.get('z') !== '0' : STANDARD.zeitmodus,
     tempo: begrenze(parseInt(p.get('t'), 10), 50, 150, STANDARD.tempo),
+    plosive: p.has('p') ? p.get('p') === '1' : STANDARD.plosive,
     hilfen: {},
   };
   const h = p.get('h');
@@ -153,7 +156,8 @@ export function leseEinstellungen(query = globalThis.location?.search ?? '') {
 /** Baut aus Einstellungen den Query-String (ohne „?“). */
 export function einstellungenAlsParameter(e) {
   const h = HILFEN.filter(hilfe => e.hilfen[hilfe.id]).map(hilfe => hilfe.kuerzel).join('') || '0';
-  return new URLSearchParams({ b: e.stand, h, z: e.zeitmodus ? 1 : 0, t: e.tempo }).toString();
+  return new URLSearchParams({ b: e.stand, h, z: e.zeitmodus ? 1 : 0, t: e.tempo, p: e.plosive ? 1 : 0 })
+    .toString();
 }
 
 /** Hängt die aktuellen Einstellungen an einen internen Link an, damit sie beim Weiterklicken erhalten bleiben. */

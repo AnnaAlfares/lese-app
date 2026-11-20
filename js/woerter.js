@@ -22,7 +22,12 @@ const WORTLISTE = [
   // lesbar ab A (O M E A)
   ['Ma-ma', 'nomen', true],
   ['O-ma', 'nomen', true],
-  ['am', 'wort', false],
+  ['am', 'wort', false],      // Sichtwort
+  // Sichtwörter: hier stehen sie, sobald sie erlesbar sind (ist, mit ab I; sind ab D).
+  // Vorher erscheinen sie nur als Ganzwort über sichtwoerter() (siehe FRUEHE_SICHTWOERTER).
+  ['ist', 'wort', false],
+  ['mit', 'wort', false],
+  ['sind', 'wort', false],
   // ab L
   ['La-ma', 'nomen', true],
   ['Lo-la', 'name', false],
@@ -142,8 +147,14 @@ const WORTLISTE = [
   ['Jo-jo', 'nomen', true],
 ];
 
-// Sichtwörter (CLAUDE.md, Regel 3): werden als Ganzes gelernt.
-export const SICHTWOERTER = Object.freeze(['ich', 'du', 'und', 'ist', 'das', 'mit', 'auf', 'ein']);
+// Sichtwörter (CLAUDE.md, Regel 3, ergänzt um „am“ und „sind“): werden als Ganzes gelernt.
+export const SICHTWOERTER = Object.freeze(['ich', 'du', 'und', 'ist', 'das', 'mit', 'auf', 'ein', 'am', 'sind']);
+
+// Früh gezeigte Sichtwörter: erscheinen ab diesem Buchstabenstand in den Übungen als Ganzwort,
+// auch wenn noch nicht alle ihre Buchstaben eingeführt sind (z. B. „sind“ vor dem D).
+// Alle übrigen Sichtwörter erscheinen erst, wenn sie erlesbar sind.
+// VORSCHLAG Stand 4 (O M E A): ab da gibt es die ersten Wörter (Mama, Oma, am). Entscheidung: Anna.
+export const FRUEHE_SICHTWOERTER = Object.freeze({ am: 4, ist: 4, mit: 4, sind: 4 });
 
 // Wörternetze (Analogielesen): gleiches Wortende, anderer Anfang.
 // Das Modellwort ist das erste Wort; es wird zuerst sicher gelesen, die anderen per Analogie.
@@ -278,11 +289,27 @@ export function lesbareSilben(stand) {
     .sort((a, b) => (b.neu - a.neu) || (a.art === b.art ? 0 : a.art === 'offen' ? -1 : 1));
 }
 
-/** Sichtwörter mit der Angabe, ob sie mit den eingeführten Buchstaben schon erlesbar wären. */
+/**
+ * Sichtwörter bei einem Buchstabenstand.
+ *   ab          Stand, ab dem das Wort in Übungen erscheint (früh gezeigt oder sobald erlesbar)
+ *   lesbar      darf bei diesem Stand gezeigt werden (ab <= stand)
+ *   erlesbarAb  Stand, ab dem alle Buchstaben eingeführt sind
+ *   erlesbar    alle Buchstaben eingeführt – das Wort kann auch Laut für Laut erlesen werden
+ *   ganzwort    wird gezeigt, ist aber noch nicht erlesbar: nur als Ganzwort verwenden
+ *               (nicht in Übungen, die Laut für Laut zusammenschleifen)
+ * Hinweis: lesbareWoerter() enthält nur erlesbare Wörter, also nie ein Ganzwort.
+ */
 export function sichtwoerter(stand) {
   return SICHTWOERTER.map(wort => {
     const grapheme = zerlege(wort);
-    return { wort, grapheme, ab: lesbarAb(grapheme), lesbar: lesbarAb(grapheme) <= stand };
+    const erlesbarAb = lesbarAb(grapheme);
+    const ab = Math.min(erlesbarAb, FRUEHE_SICHTWOERTER[wort] ?? Infinity);
+    return {
+      wort, grapheme, ab, erlesbarAb,
+      lesbar: ab <= stand,
+      erlesbar: erlesbarAb <= stand,
+      ganzwort: ab <= stand && erlesbarAb > stand,
+    };
   });
 }
 
