@@ -4,6 +4,7 @@
 import { BILDER, kodiere, dekodiere, pruefbild, gfMal } from '../js/bildercode.js';
 import { CODEBILDER } from '../js/aufnahmen.js';
 import { graphem } from '../js/config.js';
+import { zaehle, setzeSpielstand, nochBisStern } from '../js/sterne.js';
 
 /** Liefert [{ name, ok, info }] */
 export function testeBildercode() {
@@ -94,6 +95,35 @@ export function testeBildercode() {
   const anteil = gueltig / Math.ceil(16 ** 5 / 37);
   pruefe('zufällige Bilder: ca. 1 von 32 gültig (Prüfbild + Versionsbit)', anteil > 0.025 && anteil < 0.038,
     `${(anteil * 100).toFixed(1)} %`);
+
+  // --- Sterne-Regel (js/sterne.js): 10 Einheiten = 1 Stern, max. 7 ---
+  const z = {};
+  setzeSpielstand(z, [2, 0, 0, 0, 0]);
+  pruefe('Sterne: Spielstand aus Code, Zähler 0', gleich(z.sterne, [2, 0, 0, 0, 0]) && gleich(z.zaehler, [0, 0, 0, 0, 0]));
+  let neu = 0;
+  for (let n = 0; n < 9; n++) neu += zaehle(z, 1);
+  pruefe('Sterne: 9 Einheiten → noch kein Stern', neu === 0 && z.sterne[0] === 2 && nochBisStern(z, 1) === 1);
+  pruefe('Sterne: 10. Einheit → neuer Stern, Rückgabe 1', zaehle(z, 1) === 1 && z.sterne[0] === 3 && z.zaehler[0] === 0);
+  zaehle(z, 3, 7); zaehle(z, 3, 2);
+  pruefe('Sterne: Rest zählt weiter (7 + 2 = 9)', z.zaehler[2] === 9 && z.sterne[2] === 0);
+  pruefe('Sterne: 9 + 4 → 1 Stern, Rest 3', zaehle(z, 3, 4) === 1 && z.sterne[2] === 1 && z.zaehler[2] === 3);
+  pruefe('Sterne: 25 auf einmal → 2 Sterne', zaehle(z, 4, 25) === 2 && z.sterne[3] === 2 && z.zaehler[3] === 5);
+  pruefe('Sterne: Stufen getrennt', gleich(z.sterne, [3, 0, 1, 2, 0]));
+  setzeSpielstand(z, [6, 0, 0, 0, 0]);
+  pruefe('Sterne: höchstens 7', zaehle(z, 1, 30) === 1 && z.sterne[0] === 7 && zaehle(z, 1, 10) === 0 && z.sterne[0] === 7);
+  const vorher = JSON.stringify(z);
+  const warn = console.warn; console.warn = () => {};
+  const ungueltig = [zaehle(z, 0), zaehle(z, 6), zaehle(z, 2, 0), zaehle(z, 2, -3), zaehle(z, 2, 1.5)];
+  console.warn = warn;
+  pruefe('Sterne: ungültige Stufe/Anzahl ändern nichts', ungueltig.every(x => x === 0) && JSON.stringify(z) === vorher);
+  const leer = {};
+  pruefe('Sterne: zustand ohne Zähler wird angelegt', zaehle(leer, 5, 10) === 1 && gleich(leer.sterne, [0, 0, 0, 0, 1]));
+  setzeSpielstand(z);
+  pruefe('Sterne: neues Kind → alles 0', gleich(z.sterne, [0, 0, 0, 0, 0]) && gleich(z.zaehler, [0, 0, 0, 0, 0]));
+  pruefe('Sterne: Stand passt in den Bildercode', (() => {
+    const s = { }; setzeSpielstand(s); zaehle(s, 2, 70); zaehle(s, 5, 33);
+    return gleich(dekodiere(kodiere(s.sterne)).sterne, [0, 7, 0, 0, 3]);
+  })());
 
   return ergebnisse;
 }

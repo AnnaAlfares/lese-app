@@ -5,11 +5,13 @@ import { STUFEN, leseEinstellungen } from './config.js';
 import { aktiviereSprechknoepfe, sprichAnsage } from './audio.js';
 import { modulAnsage } from './aufnahmen.js';
 import { zeigeCodeEingabe, zeigeAbschluss, sterneHtml } from './codeeingabe.js';
+import { setzeSpielstand } from './sterne.js';
 
 // Einstellungen der Lehrkraft (aus der Adresse) und Spielstand (nur im Arbeitsspeicher)
 export const einstellungen = leseEinstellungen();
 export const zustand = {
-  sterne: [0, 0, 0, 0, 0], // je Stufe 0–7, kommt aus dem Bildercode (codeeingabe.js)
+  sterne: [0, 0, 0, 0, 0],  // je Stufe 0–7, kommt aus dem Bildercode (codeeingabe.js)
+  zaehler: [0, 0, 0, 0, 0], // gelesene Einheiten bis zum nächsten Stern (sterne.js: zaehle)
 };
 
 // Eigene, einfache Symbole je Stufe (inline SVG, keine externen Dateien)
@@ -40,8 +42,8 @@ const app = document.getElementById('app');
 
 // Bildercode: beim Start eingeben, bei „Fertig“ den neuen Code zeigen, bei „Ende“ alles vergessen
 function zeigeAnmeldung() {
-  zustand.sterne = [0, 0, 0, 0, 0];
-  zeigeCodeEingabe(app, { weiter: sterne => { zustand.sterne = sterne; zeigeStart(); } });
+  setzeSpielstand(zustand);
+  zeigeCodeEingabe(app, { weiter: sterne => { setzeSpielstand(zustand, sterne); zeigeStart(); } });
 }
 function zeigeEnde() {
   zeigeAbschluss(app, zustand.sterne, { zurueck: zeigeStart, ende: zeigeAnmeldung });
