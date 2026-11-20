@@ -2,11 +2,12 @@
 // z. B. solange der Finger auf der Rutsche ist. Dafür wird die eigene Aufnahme (assets/audio/laute/)
 // mit der Web Audio API geladen und ihr ruhiger Mittelteil in einer Schleife wiederholt.
 //
-// Fehlt die Aufnahme, wird der Laut einmal über audio.js gesprochen (Aufnahme oder – je nach
-// config.js – Ersatzstimme). Die Gerätestimme kann einen Laut nicht beliebig lange halten.
+// Fehlt die Aufnahme, bleibt es still (Einzellaute kommen nie aus der Gerätestimme, siehe audio.js).
+// Zwielaute (ei, au, eu) gleiten von einem Vokal zum anderen; eine Schleife im Mittelteil klänge
+// wie „aiaiai“. Für sie gibt es halteLaut(id, { schleife: false }): einmal abspielen, nicht wiederholen.
 
 import { datei } from './aufnahmen.js';
-import { sprichLaut, stoppe as stoppeAudio } from './audio.js';
+import { stoppe as stoppeAudio } from './audio.js';
 
 const ORDNER = new URL('../assets/audio/', import.meta.url);
 const KURZ = 0.25;      // Aufnahmen unter 0,25 s werden nicht geschleift (z. B. Plosive)
@@ -61,20 +62,21 @@ function mitSchleife(puffer) {
 
 /**
  * Lässt den Laut erklingen und hält ihn, bis stop() gerufen wird.
+ * schleife: false → nur einmal abspielen (für Zwielaute).
  * @returns {{stop: () => void}}
  */
-export function halteLaut(id) {
+export function halteLaut(id, { schleife = true } = {}) {
   let gestoppt = false;
   let quelle = null, lautstaerke = null;
 
   const spiele = aufnahme => {
     if (gestoppt) return;
     const c = weckeAudio();
-    if (!aufnahme || !c) { sprichLaut(id); return; } // Ersatz: einmal sprechen
+    if (!aufnahme || !c) return; // keine Aufnahme: still
     stoppeAudio(); // keine Überlagerung mit laufenden Ansagen/Silben
     quelle = c.createBufferSource();
     quelle.buffer = aufnahme.puffer;
-    if (aufnahme.bis > aufnahme.von) {
+    if (schleife && aufnahme.bis > aufnahme.von) {
       quelle.loop = true;
       quelle.loopStart = aufnahme.von;
       quelle.loopEnd = aufnahme.bis;

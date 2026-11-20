@@ -8,6 +8,7 @@
 // Didaktik: Beim Zusammenziehen (Synthese) ist die Lücke zwischen den Lauten die größte Hürde
 // („m … a“ statt „ma“). Dehnbare Laute lassen sich ohne Pause in den Vokal hineinziehen –
 // deshalb hier nur Dauerlaute (m, l, s, f, n, r, w, h, sch …), keine Plosive (t, k, p).
+// Der Laut klingt nur, solange der Finger rutscht; hält das Kind still, verstummt er (Entscheidung Anna).
 //
 // Teil 1 „Silben“: eine Rutsche, offene Silben Konsonant + Vokal.
 // Teil 2 „Wörter“: zwei (oder drei) Rutschen hintereinander (Lo-la, Ma-ma, Sa-la-mi).
@@ -24,11 +25,12 @@ import { ladeLaut, halteLaut, weckeAudio } from '../haltelaut.js';
 // Auswahl des Lesestoffs (Wörter und Silben kommen aus woerter.js)
 // ---------------------------------------------------------------------------
 const RUNDE = { silben: 8, woerter: 5 };   // Aufgaben pro Runde
-const ZWIELAUTE = new Set(['ei', 'au', 'eu']); // gleiten, lassen sich nicht gleichmäßig dehnen
-const OHNE_SCHWA = true;                      // keine Wörter mit unbetontem -e am Ende (Na-se, Ro-se)
+const ZWIELAUTE = new Set(['ei', 'au', 'eu']); // gleiten: werden einmal abgespielt statt geschleift
+const OHNE_SCHWA = false;                     // true = keine Wörter mit unbetontem -e am Ende (Na-se, Ro-se)
+const STILL_MS = 250;                         // so lange ohne Rutschen → Laut verstummt
 
 const dehnbarerAnfang = id => { const g = graphem(id); return g?.typ === 'dauerlaut' && g.anfang; };
-const dehnbarerVokal = id => graphem(id)?.typ === 'vokal' && !ZWIELAUTE.has(id);
+const dehnbarerVokal = id => graphem(id)?.typ === 'vokal'; // auch Zwielaute (Entscheidung Anna)
 const istRutschsilbe = gr => gr.length === 2 && dehnbarerAnfang(gr[0].id) && dehnbarerVokal(gr[1].id);
 // Silbe nur aus einem Vokal (O-ma, U-fo): „Vokal-Rutsche“, ein einziger Laut wird gehalten – nur in Wörtern
 const istVokalsilbe = gr => gr.length === 1 && dehnbarerVokal(gr[0].id);
@@ -137,6 +139,8 @@ function ladeCss() {
  * NOCH NICHT ENTSCHIEDEN, wie viele Sterne eine Runde bringt – deshalb wird zustand.sterne
  * vorerst nicht verändert. Hier später die Regel eintragen (Stufe 3 = zustand.sterne[2]).
  */
+// Regel (Anna): 10 gelesene Einheiten = 1 Stern, ein Zähler je Stufe über alle Module hinweg.
+// Gezählt wird je Aufgabe in fertig() (siehe „STERNE:“), nicht hier am Rundenende.
 function vergibSterne(zustand, teil, anzahlAufgaben) { // eslint-disable-line no-unused-vars
   // absichtlich leer
 }
@@ -225,6 +229,8 @@ export function starte(wurzel, { einstellungen, zustand, zurueck } = {}) {
         if (!nochAktuell()) return;
         // Jetzt liest das Kind selbst: Silbe/Wort groß zeigen, dann „weiter“
         el.classList.add('geschafft');
+        // STERNE: Hier ist eine Einheit gelesen (Silbe bzw. Wort, selbst gerutscht) – sobald js/sterne.js
+        // (Thread 2) da ist, hier den Zähler der Stufe 3 um 1 erhöhen. Bis dahin wird nichts gezählt.
         if (nr === 0) sprichAnsage('rutschen-jetzt-du');
       }
     }
@@ -276,6 +282,7 @@ function macheRutschbar(rutsche, silbe, beiFertig) {
   let finger = null;       // pointerId des rutschenden Fingers
   let klang = null;        // { id, halt } – der gerade gehaltene Laut
   let fertig = false;
+  let stillZeit = null;    // Zeitgeber: verstummen, wenn der Finger stillhält
 
   weg.style.strokeDasharray = `${laenge}`;
   const zeichne = () => {
@@ -290,7 +297,7 @@ function macheRutschbar(rutsche, silbe, beiFertig) {
   function klinge(id) {
     if (klang?.id === id) return;
     klang?.halt.stop();
-    klang = id ? { id, halt: halteLaut(id) } : null;
+    klang = id ? { id, halt: halteLaut(id, { schleife: !ZWIELAUTE.has(id) }) } : null;
     svg.classList.toggle('klingt-k', id !== null && id === oben);
     svg.classList.toggle('klingt-v', id !== null && id === unten);
   }
@@ -321,18 +328,23 @@ function macheRutschbar(rutsche, silbe, beiFertig) {
     svg.setPointerCapture(e.pointerId);
     svg.classList.add('aktiv');
     zeichne();
-    klinge(lautHier());
+    // noch kein Ton: er kommt erst, wenn der Finger wirklich rutscht
   }
   function bewege(e) {
     if (e.pointerId !== finger) return;
+    const vorher = anteil;
     rutsche_zu(e);
+    if (anteil === vorher) return; // Finger bewegt sich nicht vorwärts → zählt als Stillhalten
     zeichne();
     if (anteil >= 0.97) { anteil = 1; zeichne(); ende(); fertig = true; svg.classList.add('fertig'); beiFertig(); return; }
     klinge(lautHier());
+    clearTimeout(stillZeit);
+    stillZeit = setTimeout(() => klinge(null), STILL_MS);
   }
   function ende(e) {
     if (e && e.pointerId !== finger) return;
     finger = null;
+    clearTimeout(stillZeit);
     svg.classList.remove('aktiv');
     klinge(null);
   }
@@ -344,6 +356,6 @@ function macheRutschbar(rutsche, silbe, beiFertig) {
   svg.addEventListener('lostpointercapture', ende);
 
   return {
-    abbrechen() { klinge(null); stoppe(); },
+    abbrechen() { clearTimeout(stillZeit); klinge(null); stoppe(); },
   };
 }
