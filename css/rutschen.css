@@ -39,6 +39,9 @@ body:has(.rutschen) footer { display: none; }
 .rutsche-bild .leuchte { fill: var(--neu); opacity: 0; transition: opacity 0.15s; }
 .rutsche-bild.klingt-k .leuchte-k,
 .rutsche-bild.klingt-v .leuchte-v { opacity: 1; }
+.rutsche-bild .haltespur { font-family: var(--schrift); font-size: 44px; font-weight: 600; text-anchor: middle; fill: var(--farbe); opacity: 0.25; }
+.rutsche-bild.klingt-k .haltespur { opacity: 0.55; }
+.rutsche-bild .landung { fill: #e9e2d3; }
 .rutsche-bild .kugel { fill: #fff; stroke: var(--farbe); stroke-width: 8; }
 .rutsche.dran .rutsche-bild:not(.aktiv):not(.fertig) .kugel { animation: wippen 1.6s ease-in-out infinite; }
 .rutsche-bild.aktiv .kugel { fill: var(--neu); }

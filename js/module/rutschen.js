@@ -30,6 +30,8 @@ const OHNE_SCHWA = true;                      // keine Wörter mit unbetontem -e
 const dehnbarerAnfang = id => { const g = graphem(id); return g?.typ === 'dauerlaut' && g.anfang; };
 const dehnbarerVokal = id => graphem(id)?.typ === 'vokal' && !ZWIELAUTE.has(id);
 const istRutschsilbe = gr => gr.length === 2 && dehnbarerAnfang(gr[0].id) && dehnbarerVokal(gr[1].id);
+// Silbe nur aus einem Vokal (O-ma, U-fo): „Vokal-Rutsche“, ein einziger Laut wird gehalten – nur in Wörtern
+const istVokalsilbe = gr => gr.length === 1 && dehnbarerVokal(gr[0].id);
 
 /** Offene Silben Dauerlaut + Vokal, die beim Buchstabenstand lesbar sind (ma, lo, fe …). */
 export function rutschSilben(stand) {
@@ -38,13 +40,13 @@ export function rutschSilben(stand) {
     .map(s => ({ text: s.text, neu: s.neu, silben: [{ text: s.text, grapheme: s.grapheme }] }));
 }
 
-/** Wörter aus 2–3 solchen Silben (Mama, Lola, Sofa, Salami …). */
+/** Wörter aus 2–3 solchen Silben (Mama, Lola, Sofa, Salami …); eine Silbe darf auch nur ein Vokal sein (Oma, Ufo). */
 export function rutschWoerter(stand) {
   return lesbareWoerter(stand)
     .filter(w => w.silben.length >= 2 && w.silben.length <= 3)
     .map(w => ({ text: w.wort, neu: w.neu, silben: w.silben.map(s => ({ text: s, grapheme: zerlege(s) })) }))
-    .filter(w => w.silben.every(s => istRutschsilbe(s.grapheme)))
-    .filter(w => !OHNE_SCHWA || w.silben.at(-1).grapheme[1].id !== 'e');
+    .filter(w => w.silben.every(s => istRutschsilbe(s.grapheme) || istVokalsilbe(s.grapheme)))
+    .filter(w => !OHNE_SCHWA || w.silben.at(-1).grapheme.at(-1).id !== 'e');
 }
 
 /** n Aufgaben ziehen (neuester Buchstabe häufiger), notfalls mit Wiederholung, nie zweimal direkt hintereinander. */
@@ -68,8 +70,24 @@ const PROBEN = 120;      // Punkte entlang der Bahn für die Fingerverfolgung
 const FANGRADIUS = 90;   // so weit (in SVG-Einheiten) darf der Finger neben der Bahn sein
 const SPRUNG = 0.25;     // so weit darf der Finger auf einmal vorrücken (gegen „Abkürzungen“)
 
+// Punkte entlang der Bahn für die kleinen, blassen Vokale der Vokal-Rutsche („ooo“)
+const HALTESPUR = [[150, 215], [200, 262], [250, 312]];
+
 const svgRutsche = (silbe, farbe) => {
   const [k, v] = silbe.grapheme;
+  if (!v) {
+    // Vokal-Rutsche: oben der Vokal, die ganze Bahn lang klingt nur er; unten eine leere Landestelle
+    return `
+  <svg viewBox="0 0 ${BREITE} ${HOEHE}" class="rutsche-bild nur-vokal" style="--farbe:${farbe}">
+    <circle class="leuchte leuchte-k" cx="80" cy="78" r="66"/>
+    <path class="bahn-grund" d="${BAHN}"/>
+    <path class="bahn-weg" d="${BAHN}"/>
+    ${HALTESPUR.map(([x, y]) => `<text class="haltespur" x="${x}" y="${y}">${k.text.toLowerCase()}</text>`).join('')}
+    <ellipse class="landung" cx="280" cy="400" rx="70" ry="22"/>
+    <text class="laut laut-k" x="80" y="112">${k.text}</text>
+    <circle class="kugel" cx="80" cy="150" r="34"/>
+  </svg>`;
+  }
   return `
   <svg viewBox="0 0 ${BREITE} ${HOEHE}" class="rutsche-bild" style="--farbe:${farbe}">
     <circle class="leuchte leuchte-k" cx="80" cy="78" r="66"/>
@@ -251,7 +269,8 @@ function macheRutschbar(rutsche, silbe, beiFertig) {
   const kugel = svg.querySelector('.kugel');
   const laenge = weg.getTotalLength();
   const punkte = Array.from({ length: PROBEN + 1 }, (_, i) => weg.getPointAtLength(laenge * i / PROBEN));
-  const [konsonant, vokal] = silbe.grapheme.map(g => g.id);
+  // oben: Konsonant (bzw. Vokal bei der Vokal-Rutsche), unten: Vokal (bzw. nichts)
+  const [oben, unten = null] = silbe.grapheme.map(g => g.id);
 
   let anteil = 0;          // wie weit die Kugel ist (0 … 1)
   let finger = null;       // pointerId des rutschenden Fingers
@@ -267,13 +286,13 @@ function macheRutschbar(rutsche, silbe, beiFertig) {
   };
   zeichne();
 
-  const lautHier = () => (anteil < VOKAL_AB ? konsonant : vokal);
+  const lautHier = () => (anteil < VOKAL_AB || unten === null ? oben : unten);
   function klinge(id) {
     if (klang?.id === id) return;
     klang?.halt.stop();
     klang = id ? { id, halt: halteLaut(id) } : null;
-    svg.classList.toggle('klingt-k', id === konsonant && id !== null);
-    svg.classList.toggle('klingt-v', id === vokal && id !== null);
+    svg.classList.toggle('klingt-k', id !== null && id === oben);
+    svg.classList.toggle('klingt-v', id !== null && id === unten);
   }
 
   const imSvg = e => {
