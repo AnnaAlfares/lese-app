@@ -12,7 +12,8 @@
 // Teil 1 „Silben“: eine Rutsche, offene Silben Konsonant + Vokal.
 // Teil 2 „Wörter“: zwei (oder drei) Rutschen hintereinander (Lo-la, Ma-ma, Sa-la-mi).
 //
-// Schnittstelle (für app.js): starte(wurzel, { einstellungen, zurueck })
+// Schnittstelle (siehe app.js): starte(behaelter, { einstellungen, zustand, zurueck }) → Aufräum-Funktion.
+// Kopfzeile mit Zurück-Pfeil und Modulname baut app.js; das Modul zeichnet nur in den Behälter.
 
 import { graphem } from '../config.js';
 import { lesbareSilben, lesbareWoerter, zerlege, waehle } from '../woerter.js';
@@ -81,8 +82,6 @@ const svgRutsche = (silbe, farbe) => {
   </svg>`;
 };
 
-const PFEIL_ZURUECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
-  stroke-linecap="round" stroke-linejoin="round"><path d="M15 4 L7 12 L15 20"/></svg>`;
 const PFEIL_WEITER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
   stroke-linecap="round" stroke-linejoin="round"><path d="M4 12 H19 M13 5 L20 12 L13 19"/></svg>`;
 const NOCHMAL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
@@ -90,6 +89,8 @@ const NOCHMAL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 const LAUTSPRECHER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
   stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/>
   <path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>`;
+const FERTIG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+  stroke-linecap="round" stroke-linejoin="round"><path d="M4 13 L10 19 L20 6"/></svg>`;
 const STERN = `<svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2 6.1 20.4l1.3-6.5L2.5 9.3l6.6-.8z"/></svg>`;
 
 /** Kleines Symbol: eine bzw. zwei Rutschen (für die Auswahl Silben/Wörter). */
@@ -113,7 +114,16 @@ function ladeCss() {
   document.head.append(link);
 }
 
-export function starte(wurzel, { einstellungen, zurueck }) {
+/**
+ * Sterne für den Spielstand (Bildercode) nach einer geschafften Runde.
+ * NOCH NICHT ENTSCHIEDEN, wie viele Sterne eine Runde bringt – deshalb wird zustand.sterne
+ * vorerst nicht verändert. Hier später die Regel eintragen (Stufe 3 = zustand.sterne[2]).
+ */
+function vergibSterne(zustand, teil, anzahlAufgaben) { // eslint-disable-line no-unused-vars
+  // absichtlich leer
+}
+
+export function starte(wurzel, { einstellungen, zustand, zurueck } = {}) {
   ladeCss();
   const stand = einstellungen.stand;
   const hilfen = einstellungen.hilfen;
@@ -122,19 +132,13 @@ export function starte(wurzel, { einstellungen, zurueck }) {
 
   let anleitungGehoert = false;
   let aufraeumen = () => {};
-
-  const kopf = (inhalt = '') => `
-    <div class="kopf">
-      <button class="modul-zurueck" aria-label="Zurück" data-sprich-ansage="zurueck">${PFEIL_ZURUECK}</button>
-      <div class="kopf-mitte">${inhalt}</div>
-    </div>`;
+  let beendet = false; // nach dem Verlassen keine verspäteten Töne/Änderungen mehr
 
   // --- Auswahl: Silben oder Wörter -----------------------------------------
   function zeigeAuswahl() {
     aufraeumen();
     wurzel.innerHTML = `
       <div class="rutschen">
-        ${kopf('<h1>Rutschen</h1>')}
         <div class="kacheln">
           <button class="kachel rutschen-teil" data-teil="silben"
             ${vorrat.silben.length ? '' : 'disabled'}>${symbol(1, 'ma')}</button>
@@ -144,7 +148,6 @@ export function starte(wurzel, { einstellungen, zurueck }) {
         ${vorrat.silben.length ? '' : `<p class="rutschen-hinweis">Für dieses Spiel braucht es mindestens einen
           dehnbaren Konsonanten (z. B. M) und einen Vokal. Buchstabenstand im Lehrkraft-Bereich erhöhen.</p>`}
       </div>`;
-    wurzel.querySelector('.modul-zurueck').onclick = () => { aufraeumen(); zurueck(); };
     for (const k of wurzel.querySelectorAll('[data-teil]')) {
       k.onclick = () => { weckeAudio(); starteRunde(k.dataset.teil); };
     }
@@ -167,7 +170,7 @@ export function starte(wurzel, { einstellungen, zurueck }) {
         `<span class="stern${i < nr ? ' voll' : ''}">${STERN}</span>`).join('');
       wurzel.innerHTML = `
         <div class="rutschen" style="--anzahl:${n}">
-          ${kopf(`<div class="sterne">${sterne}</div>`)}
+          <div class="rutschen-leiste"><div class="sterne">${sterne}</div></div>
           <div class="bahnen">
             ${aufgabe.silben.map((s, i) => `<div class="rutsche${i === 0 ? ' dran' : ''}">${svgRutsche(s, farbe(i))}</div>`).join('')}
           </div>
@@ -182,7 +185,6 @@ export function starte(wurzel, { einstellungen, zurueck }) {
           </div>
         </div>`;
       const el = wurzel.querySelector('.rutschen');
-      el.querySelector('.modul-zurueck').onclick = () => { aufraeumen(); zeigeAuswahl(); };
       el.querySelector('.nochmal').onclick = () => zeigeAufgabe();
       el.querySelector('.weiter').onclick = () => {
         nr += 1;
@@ -193,11 +195,16 @@ export function starte(wurzel, { einstellungen, zurueck }) {
       const steuerungen = rutschen.map((r, i) => macheRutschbar(r, aufgabe.silben[i], () => fertig(i)));
       aufraeumen = () => steuerungen.forEach(s => s.abbrechen());
 
+      // gilt diese Aufgabe noch? (Kind hat inzwischen „nochmal“ getippt oder das Modul verlassen)
+      const nochAktuell = () => !beendet && el.isConnected;
+
       async function fertig(i) {
         rutschen[i].classList.replace('dran', 'fertig');
         await sprichSilbe(aufgabe.silben[i].text);
+        if (!nochAktuell()) return;
         if (i + 1 < n) { rutschen[i + 1].classList.add('dran'); return; }
         if (n > 1) await sprichWort(aufgabe.text);
+        if (!nochAktuell()) return;
         // Jetzt liest das Kind selbst: Silbe/Wort groß zeigen, dann „weiter“
         el.classList.add('geschafft');
         if (nr === 0) sprichAnsage('rutschen-jetzt-du');
@@ -206,23 +213,33 @@ export function starte(wurzel, { einstellungen, zurueck }) {
 
     function zeigeEnde() {
       aufraeumen();
+      vergibSterne(zustand, teil, aufgaben.length);
       wurzel.innerHTML = `
         <div class="rutschen">
-          ${kopf()}
           <div class="ende">
             <div class="sterne gross">${aufgaben.map(() => `<span class="stern voll">${STERN}</span>`).join('')}</div>
             <div class="zeile-knoepfe">
               <button class="nochmal-runde" aria-label="Noch eine Runde">${NOCHMAL}</button>
+              <button class="zur-auswahl" aria-label="Silben oder Wörter wählen">${symbol(1, '')}${symbol(2, '')}</button>
+              ${zurueck ? `<button class="fertig-knopf" aria-label="Fertig">${FERTIG}</button>` : ''}
             </div>
           </div>
         </div>`;
       sprichAnsage('rutschen-geschafft');
-      wurzel.querySelector('.modul-zurueck').onclick = zeigeAuswahl;
       wurzel.querySelector('.nochmal-runde').onclick = () => starteRunde(teil);
+      wurzel.querySelector('.zur-auswahl').onclick = zeigeAuswahl;
+      wurzel.querySelector('.fertig-knopf')?.addEventListener('click', () => { schliessen(); zurueck(); });
     }
   }
 
+  function schliessen() {
+    beendet = true;
+    aufraeumen();
+    stoppe();
+  }
+
   zeigeAuswahl();
+  return schliessen; // app.js ruft das beim Verlassen auf
 }
 
 // ---------------------------------------------------------------------------

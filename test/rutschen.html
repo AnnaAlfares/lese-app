@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>Testseite – Rutschen: Silben und Wörter je Buchstabenstand</title>
+  <title>Testseite – Rutschen</title>
   <link rel="stylesheet" href="../css/app.css">
   <style>
     body { font-size: 18px; letter-spacing: 0; }
@@ -12,19 +12,46 @@
     th, td { border: 1px solid #ddd; padding: 6px 10px; vertical-align: top; text-align: left; }
     th { background: #f1eee8; }
     .neu { background: var(--neu); font-weight: 600; }
-    span { margin-right: 8px; }
+    td span { margin-right: 8px; }
+    #modul { font-size: 32px; letter-spacing: 0.04em; border: 3px dashed var(--rand); border-radius: 20px; padding: 16px; }
   </style>
 </head>
 <body>
   <main>
-    <h1>Rutschen: Lesestoff je Buchstabenstand</h1>
+    <h1>Testseite Rutschen</h1>
+    <p>Das Modul läuft hier direkt, ohne den Lader aus app.js. Buchstabenstand und Hilfen kommen aus der Adresse,
+      z. B. <a href="?b=12&h=bfi">?b=12&amp;h=bfi</a> · <a href="?b=5&h=0">?b=5&amp;h=0</a> ·
+      <a href="?b=4&h=f">?b=4&amp;h=f</a></p>
+    <p><button id="neustart">Modul neu starten</button> <button id="beenden">Aufräumen (wie Verlassen)</button>
+      <span id="meldung"></span></p>
+    <div id="modul"></div>
+
+    <h2>Lesestoff je Buchstabenstand</h2>
     <p>Nur Dauerlaut + einfacher Vokal (keine Zwielaute), Wörter aus 2–3 solchen Silben, ohne -e am Ende.
       Gelb = mit dem neuesten Buchstaben (wird häufiger gezogen).</p>
     <table><thead><tr><th>Stand</th><th>Silben</th><th>Wörter</th></tr></thead><tbody id="t"></tbody></table>
   </main>
   <script type="module">
-    import { BUCHSTABEN } from '../js/config.js';
-    import { rutschSilben, rutschWoerter } from '../js/module/rutschen.js';
+    import { BUCHSTABEN, leseEinstellungen } from '../js/config.js';
+    import { aktiviereSprechknoepfe } from '../js/audio.js';
+    import { starte, rutschSilben, rutschWoerter } from '../js/module/rutschen.js';
+
+    // Modul direkt starten – gleiche Schnittstelle wie in app.js
+    const behaelter = document.getElementById('modul');
+    const meldung = t => { document.getElementById('meldung').textContent = t; };
+    const zustand = { sterne: [0, 0, 0, 0, 0] };
+    let aufraeumen = null;
+    function neu() {
+      aufraeumen?.();
+      aufraeumen = starte(behaelter, { einstellungen: leseEinstellungen(), zustand,
+        zurueck: () => meldung(`zurueck() aufgerufen, Sterne: ${zustand.sterne.join(' ')}`) });
+      meldung('');
+    }
+    document.getElementById('neustart').onclick = neu;
+    document.getElementById('beenden').onclick = () => { aufraeumen?.(); aufraeumen = null; behaelter.innerHTML = ''; meldung('aufgeräumt'); };
+    aktiviereSprechknoepfe(behaelter);
+    neu();
+
     const zeig = l => l.map(x => `<span class="${x.neu ? 'neu' : ''}">${x.silben.map(s => s.text).join('-')}</span>`).join('');
     document.getElementById('t').innerHTML = BUCHSTABEN.map((b, i) =>
       `<tr><td>${i + 1} (${b.anzeige})</td><td>${zeig(rutschSilben(i + 1))}</td><td>${zeig(rutschWoerter(i + 1))}</td></tr>`).join('');

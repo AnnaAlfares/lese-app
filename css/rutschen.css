@@ -3,10 +3,8 @@
 /* Fußzeile während der Übung ausblenden, damit alles ohne Scrollen passt */
 body:has(.rutschen) footer { display: none; }
 
-.rutschen { display: flex; flex-direction: column; min-height: calc(100vh - 64px); }
-.rutschen .kopf { margin-bottom: 8px; }
-.rutschen .kopf-mitte { flex: 1; display: flex; justify-content: center; }
-.modul-zurueck svg { width: 40px; height: 40px; }
+.rutschen { display: flex; flex-direction: column; }
+.rutschen-leiste { display: flex; justify-content: center; margin-bottom: 8px; }
 
 /* Auswahl Silben / Wörter */
 .rutschen-teil { background: #d3e4f5; width: 340px; }
@@ -30,7 +28,7 @@ body:has(.rutschen) footer { display: none; }
   display: block;
   height: auto;
   /* so groß wie möglich: passt in die Höhe (Kopf und Ergebniszeile abziehen) und in die Breite */
-  width: min(calc((100vw - 140px) / var(--anzahl, 1)), calc((100vh - 290px) * 360 / 470));
+  width: min(calc((100vw - 140px) / var(--anzahl, 1)), calc((100vh - 360px) * 360 / 470));
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
@@ -60,6 +58,10 @@ body:has(.rutschen) footer { display: none; }
 .ergebnis .weiter { min-width: 120px; min-height: 96px; background: #dcebdc; border-color: #4f8a4f; }
 .ergebnis .weiter svg { width: 64px; height: 64px; }
 
-.ende { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 48px; }
-.nochmal-runde svg { width: 64px; height: 64px; }
-.nochmal-runde { min-width: 120px; min-height: 96px; }
+.ende { flex: 1; min-height: 55vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 48px; }
+.zeile-knoepfe { display: flex; gap: 32px; }
+.zeile-knoepfe button { min-width: 120px; min-height: 96px; }
+.nochmal-runde svg, .fertig-knopf svg { width: 64px; height: 64px; }
+.fertig-knopf { background: #dcebdc; border-color: #4f8a4f; }
+.zur-auswahl .symbol { width: auto; height: 56px; }
+.zur-auswahl .symbol-text { display: none; }
