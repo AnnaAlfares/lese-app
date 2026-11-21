@@ -25,3 +25,39 @@ vollen Zehner einen Stern in `zustand.sterne[stufe - 1]` und gibt die Zahl der *
 Sterne** zurück (meist 0 oder 1, als Wahrheitswert nutzbar). Ein Zähler je Stufe in `zustand.zaehler`,
 nur im Arbeitsspeicher, zählt über Runden und Module weiter. `nochBisStern(zustand, stufe)` liefert, wie
 viele Einheiten bis zum nächsten Stern fehlen.
+
+## Loben und neuen Stern zeigen (`../belohnung.js`)
+
+Ein gemeinsamer, ruhiger Belohnungs-Moment (CLAUDE.md, Regel 7): kein Pop-up. Ein kleines Zeichen erscheint
+oben rechts im Modul-Bereich, verschwindet von selbst und lässt Fingertipps durch. Gestaltung: `css/belohnung.css`.
+
+```js
+import { lobe, feiereStern } from '../belohnung.js';
+import { zaehle } from '../sterne.js';
+
+if (zaehle(zustand, 3)) feiereStern(bereich);   // neuer Stern: Stern schwebt, „Neuer Stern!“
+else lobe(bereich);                             // kurzes Lob: Haken, „Toll gemacht!“ / „Prima!“ / …
+```
+
+- `lobe(behaelter, { ansage } = {}) → Promise`: grüner Haken (ca. 1,2 s) und eine Lob-Ansage. Die Lob-Ansagen
+  wechseln sich ab (jede einmal, nie zweimal direkt hintereinander).
+- `feiereStern(behaelter, { ansage } = {}) → Promise`: goldener Stern (ca. 2,2 s), Ansage „Neuer Stern!“.
+- `behaelter`: das Element des Moduls, in dem das Zeichen erscheinen soll (bekommt bei Bedarf
+  `position: relative`). `null` = nur sprechen.
+- `ansage`: eigene Ansage-id statt der Standard-Ansage, oder `false` = stumm.
+- Das Promise ist erfüllt, wenn die Ansage zu Ende ist. Abwarten ist freiwillig; das Kind kann sofort weitertippen.
+- `naechstesLob()` liefert nur die nächste Lob-Ansage-id (zum Sprechen ohne Zeichen).
+
+Wie oft gelobt wird, entscheidet das Modul (z. B. nicht nach jeder Silbe im Silbenteppich).
+
+Allgemeine Ansagen für alle Module (in `../aufnahmen.js`, mit `sprichAnsage(id)` aus `../audio.js`):
+
+| id | Text |
+|----|------|
+| `lob-toll`, `lob-gut`, `lob-super`, `lob-prima`, `lob-klasse` | Toll gemacht! · Das hast du gut gemacht! · Super! · Prima! · Klasse! |
+| `neuer-stern` | Neuer Stern! |
+| `geschafft` | Geschafft! |
+| `neuer-rekord` | Neuer Rekord! |
+| `noch-einmal` | Versuch es noch einmal. |
+
+Ausprobieren: `test/belohnung.html`.

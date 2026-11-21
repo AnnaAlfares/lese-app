@@ -34,6 +34,16 @@ export function datei(art, wert) {
 // Ansagen: alles, was die App sagt und kein Laut, keine Silbe, kein Lesewort ist.
 // Module tragen hier ihre Ansagen ein (id → Sprechtext), nie im Modul selbst.
 // ---------------------------------------------------------------------------
+/** Lob-Ansagen (id → Text), wechseln sich ab (belohnung.js). Neue einfach hier ergänzen. */
+const LOB = {
+  'lob-toll': 'Toll gemacht!',
+  'lob-gut': 'Das hast du gut gemacht!',
+  'lob-super': 'Super!',
+  'lob-prima': 'Prima!',
+  'lob-klasse': 'Klasse!',
+};
+export const LOB_ANSAGEN = Object.freeze(Object.keys(LOB));
+
 const ZAHLWOERTER = ['eins', 'zwei', 'drei', 'vier', 'fünf', 'sechs', 'sieben', 'acht', 'neun', 'zehn',
   'elf', 'zwölf', 'dreizehn', 'vierzehn', 'fünfzehn', 'sechzehn'];
 /** Namen der 16 Bildercode-Bilder (Reihenfolge = Zahl 1–16). Werden als Wörter (woerter/…) aufgenommen. */
@@ -52,6 +62,12 @@ export const ANSAGEN = Object.freeze({
   'code-eingeben': 'Tippe die Bilder von deiner Karte an.',
   'ich-bin-neu': 'Ich bin neu.',
   'dein-code': 'Das ist dein neuer Code.',
+  // Belohnung und allgemeine Rückmeldungen für alle Module (belohnung.js)
+  ...LOB,
+  'neuer-stern': 'Neuer Stern!',
+  'geschafft': 'Geschafft!',
+  'neuer-rekord': 'Neuer Rekord!',
+  'noch-einmal': 'Versuch es noch einmal.',
 });
 
 /** Ansage-id eines Modulnamens, z. B. 'Wo hörst du es?' → 'modul-wo-hoerst-du-es'. */
