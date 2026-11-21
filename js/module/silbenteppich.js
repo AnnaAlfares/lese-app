@@ -20,8 +20,8 @@ const MAX_ZEILEN = 5;            // Konsonant-Zeilen im geordneten Teppich
 const MAX_SPALTEN = 5;           // Vokal-Spalten im geordneten Teppich / Silben je Zeile gemischt
 const MAX_FELDER_GEMISCHT = 30;  // höchstens 6 Zeilen × 5 Silben
 const MINUTE_MS = 60_000;
-// Eine Silbe zählt (für Sterne) nur, wenn das Kind nicht schneller als nach dieser Zeit weitertippt.
-// Sterne-Regel von Anna: ca. 0,5 s; schnelles Durchtippen ohne Lesen zählt nicht.
+// Mindestzeit je Silbe (Entscheidung Anna, ca. 0,5 s, fest): Für Sterne zählt eine Silbe nur, wenn das Kind
+// nicht schneller weitertippt. In den Zeitmodi geht es vorher gar nicht weiter (Zahl und Rekord bleiben ehrlich).
 const MINDESTZEIT_MS = 500;
 // Grundvokale stehen im geordneten Teppich immer als Spalten da (Entscheidung Anna)
 const GRUNDVOKALE = ['a', 'e', 'i', 'o', 'u'];
@@ -349,6 +349,10 @@ export function starte(wurzel, { einstellungen }) {
     function weiter() {
       if (!laeuft || fertig) return;
       const jetzt = performance.now();
+      // In den Zeitmodi geht es erst nach MINDESTZEIT_MS weiter (Entscheidung Anna): Durchtippen ohne
+      // Lesen erhöht weder die Zahl im 1-Minuten-Modus noch verkürzt es die gestoppte Zeit – beide Rekorde
+      // bleiben ehrlich. Ein zu schneller Tipp wird einfach überhört (fängt auch versehentliche Doppeltipps ab).
+      if (zeit && jetzt - aktuellSeit < MINDESTZEIT_MS) return;
       // Nur eine Silbe (kein einzelner Laut der geordneten Ansicht) zählt, und nur, wenn das Kind
       // nicht schneller als MINDESTZEIT_MS weitergetippt hat.
       if (felder[i].art === 'silbe' && jetzt - aktuellSeit >= MINDESTZEIT_MS && !gezaehlt.has(i)) {
