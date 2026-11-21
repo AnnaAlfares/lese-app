@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Testseite – Bildercode</title>
+  <link rel="stylesheet" href="../css/app.css">
+  <!-- Nur für die Entwicklung: Tests für js/bildercode.js und Ausprobieren von Kodieren/Dekodieren. -->
+  <style>
+    body { font-size: 18px; letter-spacing: 0; }
+    main { max-width: 1400px; }
+    h1 { font-size: 32px; } h2 { font-size: 26px; }
+    table { border-collapse: collapse; background: #fff; }
+    th, td { border: 1px solid #ddd; padding: 4px 10px; text-align: left; }
+    .ok { color: #2e7d32; font-weight: 700; }
+    .fehl { color: #b23b00; font-weight: 700; }
+    .info { color: #666; }
+    .zeile select, .zeile input { font-size: 22px; min-height: 48px; }
+    .zeile input { width: 70px; }
+    .bilder { display: flex; gap: 10px; margin-top: 10px; }
+    .bilder figure { margin: 0; text-align: center; width: 110px; }
+    .bilder img { width: 100px; height: 100px; object-fit: contain; background: #fff; border: 1px solid #ddd; border-radius: 10px; }
+    .ergebnis { font-size: 22px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Testseite: Bildercode und Sterne</h1>
+    <p>Sternestand der 5 Stufen (je 0–7) ↔ 5 Bilder (4 Datenbilder + 1 Prüfbild). Aufbau und Prüfbild: siehe
+      Kommentar in <code>js/bildercode.js</code>. Die Tests prüfen auch die Sterne-Regel aus <code>js/sterne.js</code>. Die gleichen Tests laufen mit <code>node test/bildercode-tests.js</code>.</p>
+
+    <h2>Tests</h2>
+    <p id="zusammenfassung"></p>
+    <table><thead><tr><th></th><th>Test</th><th>Info</th></tr></thead><tbody id="tests"></tbody></table>
+
+    <h2>Kodieren: Sterne → Bilder</h2>
+    <div class="zeile" id="sterne"></div>
+    <div class="bilder" id="code"></div>
+
+    <h2>Dekodieren: Bilder → Sterne</h2>
+    <div class="zeile" id="eingabe"></div>
+    <div class="bilder" id="eingabe-bilder"></div>
+    <p class="ergebnis" id="dekodiert"></p>
+
+    <h2>Alle 16 Bilder</h2>
+    <table><thead><tr><th>Zahl</th><th>Wort</th><th>Anlaut</th><th>Datei</th></tr></thead><tbody id="liste"></tbody></table>
+  </main>
+
+  <script type="module">
+    import { BILDER, kodiere, dekodiere } from '../js/bildercode.js';
+    import { graphem } from '../js/config.js';
+    import { testeBildercode } from './bildercode-tests.js';
+
+    // Tests
+    const ergebnisse = testeBildercode();
+    const fehler = ergebnisse.filter(e => !e.ok).length;
+    document.getElementById('zusammenfassung').innerHTML = fehler
+      ? `<span class="fehl">${fehler} von ${ergebnisse.length} Tests fehlgeschlagen</span>`
+      : `<span class="ok">alle ${ergebnisse.length} Tests bestanden</span>`;
+    document.getElementById('tests').innerHTML = ergebnisse.map(e =>
+      `<tr><td class="${e.ok ? 'ok' : 'fehl'}">${e.ok ? '✓' : '✗'}</td><td>${e.name}</td><td class="info">${e.info}</td></tr>`).join('');
+
+    const figur = nr => {
+      const b = BILDER[nr - 1];
+      return b ? `<figure><img src="../${b.bild}" alt=""><figcaption>${b.nr} ${b.wort}</figcaption></figure>`
+        : `<figure>?</figure>`;
+    };
+
+    // Kodieren
+    const sterneFeld = document.getElementById('sterne');
+    sterneFeld.innerHTML = [1, 2, 3, 4, 5].map(n => `<label>Stufe ${n}
+      <select>${[0, 1, 2, 3, 4, 5, 6, 7].map(s => `<option>${s}</option>`).join('')}</select></label>`).join('');
+    const kodieren = () => {
+      const sterne = [...sterneFeld.querySelectorAll('select')].map(s => Number(s.value));
+      document.getElementById('code').innerHTML = kodiere(sterne).map(figur).join('');
+    };
+    sterneFeld.addEventListener('change', kodieren);
+    kodieren();
+
+    // Dekodieren
+    const eingabe = document.getElementById('eingabe');
+    eingabe.innerHTML = [1, 2, 3, 4, 5].map(n =>
+      `<label>${n === 5 ? 'Prüfbild' : `Bild ${n}`} <input type="number" min="1" max="16" value="1"></label>`).join('');
+    const dekodieren = () => {
+      const bilder = [...eingabe.querySelectorAll('input')].map(i => Number(i.value));
+      document.getElementById('eingabe-bilder').innerHTML = bilder.map(figur).join('');
+      const e = dekodiere(bilder);
+      document.getElementById('dekodiert').innerHTML = e.ok
+        ? `<span class="ok">gültig</span> – Sterne je Stufe: ${e.sterne.join(' · ')}`
+        : `<span class="fehl">ungültig (${e.grund})</span> – die App sagt: „Schau noch einmal auf deine Karte.“`;
+    };
+    eingabe.addEventListener('input', dekodieren);
+    dekodieren();
+
+    // Liste
+    document.getElementById('liste').innerHTML = BILDER.map(b =>
+      `<tr><td>${b.nr}</td><td>${b.wort}</td><td>${graphem(b.anlaut).anzeige}</td><td><code>${b.bild}</code></td></tr>`).join('');
+  </script>
+</body>
+</html>

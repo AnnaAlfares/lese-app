@@ -4,11 +4,14 @@
 import { STUFEN, leseEinstellungen } from './config.js';
 import { aktiviereSprechknoepfe, sprichAnsage } from './audio.js';
 import { modulAnsage } from './aufnahmen.js';
+import { zeigeCodeEingabe, zeigeAbschluss, sterneHtml } from './codeeingabe.js';
+import { setzeSpielstand } from './sterne.js';
 
 // Einstellungen der Lehrkraft (aus der Adresse) und Spielstand (nur im Arbeitsspeicher)
 export const einstellungen = leseEinstellungen();
 export const zustand = {
-  sterne: [0, 0, 0, 0, 0], // je Stufe 0–7, kommt später aus dem Bildercode
+  sterne: [0, 0, 0, 0, 0],  // je Stufe 0–7, kommt aus dem Bildercode (codeeingabe.js)
+  zaehler: [0, 0, 0, 0, 0], // gelesene Einheiten bis zum nächsten Stern (sterne.js: zaehle)
 };
 
 // Eigene, einfache Symbole je Stufe (inline SVG, keine externen Dateien)
@@ -32,17 +35,31 @@ const SYMBOLE = {
 const PFEIL_ZURUECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
   stroke-linecap="round" stroke-linejoin="round"><path d="M15 4 L7 12 L15 20"/></svg>`;
 
+const HAKEN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+  stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>`;
+
 const app = document.getElementById('app');
+
+// Bildercode: beim Start eingeben, bei „Fertig“ den neuen Code zeigen, bei „Ende“ alles vergessen
+function zeigeAnmeldung() {
+  setzeSpielstand(zustand);
+  zeigeCodeEingabe(app, { weiter: sterne => { setzeSpielstand(zustand, sterne); zeigeStart(); } });
+}
+function zeigeEnde() {
+  zeigeAbschluss(app, zustand.sterne, { zurueck: zeigeStart, ende: zeigeAnmeldung });
+}
 
 function zeigeStart() {
   app.innerHTML = `
-    <div class="kopf"><h1>Lese-App</h1></div>
+    <div class="kopf"><h1>Lese-App</h1>
+      <button class="fertig" aria-label="Fertig">${HAKEN}<span>Fertig</span></button></div>
     <div class="kacheln">
       ${STUFEN.map(s => `
         <button class="kachel" data-stufe="${s.nr}" style="background:${s.farbe}">
           ${SYMBOLE[s.nr]}
           <span class="nr">${s.nr}</span>
           <span class="titel">${s.titel}</span>
+          ${sterneHtml(zustand.sterne[s.nr - 1])}
         </button>`).join('')}
     </div>`;
 }
@@ -71,11 +88,15 @@ app.addEventListener('click', e => {
     zeigeStufe(stufe.nr);
     return;
   }
-  if (e.target.closest('.zurueck')) {
+  if (e.target.closest('.fertig')) {
+    zeigeEnde();
+    return;
+  }
+  if (e.target.closest('.zurueck') && !e.target.closest('.abschluss')) {
     sprichAnsage('zurueck');
     zeigeStart();
   }
 });
 
 aktiviereSprechknoepfe(app);
-zeigeStart();
+zeigeAnmeldung();
