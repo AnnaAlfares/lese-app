@@ -60,6 +60,21 @@ export const BUCHSTABEN = Object.freeze([
 
 export const ANZAHL_BUCHSTABEN = BUCHSTABEN.length; // 41
 
+// Nicht-Basisgrapheme: Grapheme, die nicht die häufigste Schreibung ihres Lautes sind, sondern eine
+// orthographische Besonderheit (Rechtschreibung, nicht alphabetische Lesephase). Silben und Wörter
+// mit ihnen werden in woerter.js aussortiert. Quelle: NRW-Handreichung „Lesekompetenz gezielt fördern“,
+// S. 70 (v, ß, ie, c als orthographische Besonderheiten) und S. 98 (Begriff Basisgraphem).
+//   v  für /f/ (Basis: f) bzw. /w/ (Basis: w)     c  für /k/ (Basis: k)
+//   y  für /ü/ bzw. /i/ (Basis: ü, i)              ß  für /s/ nach langem Vokal (Basis: s)
+//   ie für langes /i/ – Achtung: laut S. 98 statistisch eigentlich Basisgraphem; auf Annas Wunsch
+//      hier wie S. 70 als Besonderheit behandelt (Rückfrage offen).
+// Die Buchstaben selbst bleiben in der Reihenfolge und können als Buchstaben geübt werden.
+export const NICHT_BASISGRAPHEME = Object.freeze(new Set(['v', 'c', 'y', 'ß', 'ie']));
+
+// Qu steht im Deutschen nur vor bestimmten Vokalen (Qualle, Quelle, Quiz, Quote, quälen).
+// „quu“, „queu“, „quau“ usw. gibt es nicht – solche Silben werden aussortiert.
+export const VOKALE_NACH_QU = Object.freeze(new Set(['a', 'e', 'i', 'o', 'ä']));
+
 /** Graphem-Objekt zu einer id ('sch', 'o', …) oder undefined. */
 export function graphem(id) {
   return BUCHSTABEN.find(b => b.id === id);

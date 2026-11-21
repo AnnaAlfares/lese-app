@@ -20,6 +20,7 @@
     .w.neu { background: var(--neu); font-weight: 600; }
     .w.sicht { border: 1px dashed #999; }
     .w.ganz { font-style: italic; color: #6a4c93; }
+    .w.raus { text-decoration: line-through; color: #a33; }
     .g { border-bottom: 2px solid #9bb; margin-right: 2px; }
     details summary { cursor: pointer; color: #555; }
     .laute { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -43,8 +44,11 @@
     <div class="laute" id="laute"></div>
 
     <h2>Je Buchstabenstand</h2>
+    <p>Spalte „aussortiert“: Silben und Wörter, deren Buchstaben eingeführt sind, die aber nie angeboten werden,
+      weil sie nicht lauttreu sind (Regel in <code>js/woerter.js</code>, Daten in <code>js/config.js</code>):
+      <span id="regel"></span></p>
     <table>
-      <thead><tr><th>Stand</th><th>neu</th><th>Wörter</th><th>lesbare Wörter</th><th>Silben</th><th>Wörternetze</th></tr></thead>
+      <thead><tr><th>Stand</th><th>neu</th><th>Wörter</th><th>lesbare Wörter</th><th>Silben</th><th>aussortiert</th><th>Wörternetze</th></tr></thead>
       <tbody id="staende"></tbody>
     </table>
 
@@ -60,7 +64,8 @@
 
   <script type="module">
     import { BUCHSTABEN } from '../js/config.js';
-    import { lesestoff, pruefeWortliste, alleWoerter } from '../js/woerter.js';
+    import { lesestoff, pruefeWortliste, alleWoerter, aussortiert } from '../js/woerter.js';
+    import { NICHT_BASISGRAPHEME, VOKALE_NACH_QU } from '../js/config.js';
     import { aktiviereSprechknoepfe, stimmeBereit, kannSprechen } from '../js/audio.js';
 
     const wortSpan = (w, neu, sicht = false, ganz = false) =>
@@ -68,6 +73,21 @@
       + `${ganz ? ' title="Ganzwort: noch nicht alle Buchstaben eingeführt"' : ''}>${w}</span>`;
     const graphemeAnzeige = gr => gr.map(x => `<span class="g">${x.text}</span>`).join('');
     const standName = n => n === Infinity ? 'nie' : `${n} (${BUCHSTABEN[n - 1].anzeige})`;
+
+    // Aussortiert (nicht lauttreu): nur zeigen, was bei diesem Stand neu hinzukommt
+    let bisher = new Set();
+    function aussortiertZelle(n) {
+      const a = aussortiert(n);
+      const alle = [...a.silben.map(x => ['Silbe', x.text, x.aussortiert]), ...a.woerter.map(x => ['Wort', x.wort, x.aussortiert])];
+      const neu = alle.filter(([, t]) => !bisher.has(t));
+      alle.forEach(([, t]) => bisher.add(t));
+      if (!alle.length) return '';
+      return `<details><summary>${alle.length} gesamt, ${neu.length} neu</summary>`
+        + neu.map(([art, t, grund]) => `<span class="w raus" title="${art}: ${grund}">${t}</span>`).join('')
+        + `<br><small>${[...new Set(neu.map(([, , g]) => g))].join('; ')}</small></details>`;
+    }
+    document.getElementById('regel').textContent =
+      `Nicht-Basisgrapheme: ${[...NICHT_BASISGRAPHEME].join(', ')}. Qu nur vor: ${[...VOKALE_NACH_QU].join(', ')}.`;
 
     // Je Buchstabenstand
     let zeilen = '';
@@ -85,6 +105,7 @@
         <td><details><summary>${s.silben.length} Silben, ${s.silben.filter(x => x.neu).length} neu</summary>
             ${s.silben.map(x => `<span class="w${x.neu ? ' neu' : ''}" data-sprich-silbe="${x.text}">${x.text}</span>`).join('')}
             </details></td>
+        <td>${aussortiertZelle(n)}</td>
         <td>${s.netze.map(nz => `-${nz.endung}: ${nz.woerter.join(', ')}`).join('<br>')}</td>
       </tr>`;
     }
