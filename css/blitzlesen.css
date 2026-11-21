@@ -1,15 +1,14 @@
 /* Blitzlesen – eigene Gestaltung des Moduls (wird von js/module/blitzlesen.js eingebunden).
    Größen mit clamp(), damit es auf dem iPad (1180 × 820) und dem Digiboard (1920 × 1080) passt. */
 
-.modul { display: flex; flex-direction: column; align-items: center; }
 
 .blitz-hinweis { max-width: 900px; font-size: 28px; color: #555; text-align: center; }
 
 /* ---------- Sterne ---------- */
-.stern { display: inline-block; width: 1em; height: 1em; }
-.stern svg { width: 100%; height: 100%; fill: #e6e0d4; stroke: #c9c0ae; stroke-width: 1; }
-.stern.voll svg { fill: #f6c21c; stroke: #b98a00; }
-.stern.neu { animation: blitz-hops 0.5s ease-out; }
+.blitz-stern { display: inline-block; width: 1em; height: 1em; }
+.blitz-stern svg { width: 100%; height: 100%; fill: #e6e0d4; stroke: #c9c0ae; stroke-width: 1; }
+.blitz-stern.voll svg { fill: #f6c21c; stroke: #b98a00; }
+.blitz-stern.neu { animation: blitz-hops 0.5s ease-out; }
 .blitz-sterne { display: inline-flex; gap: 0.15em; font-size: clamp(36px, 3.4vw, 56px); }
 .blitz-sterne.klein { font-size: 24px; gap: 4px; }
 .blitz-sterne.gross { font-size: clamp(56px, 6vw, 96px); }
@@ -60,8 +59,8 @@
 }
 .blitz-feld.blitz { border-color: #f2b600; }
 .blitz-feld.aufloesung { border-color: #9cc79c; }
-.fixpunkt { width: 24px; height: 24px; border-radius: 50%; background: #999; }
-.fragezeichen { font-size: 96px; color: #ccc; }
+.blitz-feld .fixpunkt { width: 24px; height: 24px; border-radius: 50%; background: #999; }
+.blitz-feld .fragezeichen { font-size: 96px; color: #ccc; }
 .blitz-wort {
   font-size: clamp(88px, 8vw, 140px); line-height: 1.1; letter-spacing: 0.08em;
   display: inline-flex; align-items: flex-end;

@@ -2,7 +2,7 @@
 // Der Zustand steht nur in der Adresse dieser Seite (history.replaceState) – kein Speichern.
 
 import { BUCHSTABEN, HILFEN, leseEinstellungen, einstellungenAlsParameter } from './config.js';
-import { lesbareWoerter, lesbareSilben } from './woerter.js';
+import { lesbareWoerter, lesbareSilben, sichtwoerter } from './woerter.js';
 import { setzeTempo, sprichMitStimme, stimmeBereit } from './audio.js';
 
 const e = leseEinstellungen();
@@ -30,6 +30,9 @@ $('hilfen').addEventListener('click', ev => {
 
 // Zeitmodus
 $('zeitmodus').addEventListener('click', () => { e.zeitmodus = !e.zeitmodus; aktualisiere(); });
+
+// Plosive im Leseapparat
+$('plosive').addEventListener('click', () => { e.plosive = !e.plosive; aktualisiere(); });
 
 // Sprechtempo
 $('tempo').value = e.tempo;
@@ -63,6 +66,7 @@ function aktualisiere() {
     knopf.setAttribute('aria-pressed', e.hilfen[knopf.dataset.hilfe]);
   }
   $('zeitmodus').setAttribute('aria-pressed', e.zeitmodus);
+  $('plosive').setAttribute('aria-pressed', e.plosive);
   $('tempo-wert').textContent = `${e.tempo} %`;
   setzeTempo(e.tempo);
 
@@ -70,11 +74,13 @@ function aktualisiere() {
   const woerter = lesbareWoerter(n);
   const silben = lesbareSilben(n);
   const neue = woerter.filter(w => w.neu).length;
+  const sicht = sichtwoerter(n).filter(x => x.lesbar);
   const beispiele = woerter.slice(0, 14)
     .map(w => w.neu ? `<span class="neu">${w.wort}</span>` : w.wort).join(', ');
   $('vorschau').innerHTML = `Stand ${n} von ${BUCHSTABEN.length}, zuletzt <b>${BUCHSTABEN[n - 1].anzeige}</b>: `
     + `${woerter.length} Wörter (${neue} mit dem neuen Buchstaben), ${silben.length} Silben.`
-    + (woerter.length ? `<br><span class="leise">${beispiele}${woerter.length > 14 ? ' …' : ''}</span>` : '');
+    + (woerter.length ? `<br><span class="leise">${beispiele}${woerter.length > 14 ? ' …' : ''}</span>` : '')
+    + (sicht.length ? `<br><span class="leise">Sichtwörter: ${sicht.map(x => x.ganzwort ? `${x.wort} (als Ganzwort)` : x.wort).join(', ')}</span>` : '');
 
   // Adresse dieser Seite und Link für die iPads
   const parameter = einstellungenAlsParameter(e);

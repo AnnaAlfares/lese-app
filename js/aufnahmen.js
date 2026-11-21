@@ -49,6 +49,9 @@ export const ANSAGEN = Object.freeze({
   // Bildercode (CLAUDE.md, Regel 10): Zahlen; die Bildnamen sind Wörter (siehe CODEBILDER)
   ...Object.fromEntries(ZAHLWOERTER.map((z, i) => [`zahl-${i + 1}`, z])),
   'schau-noch-einmal': 'Schau noch einmal auf deine Karte.',
+  'code-eingeben': 'Tippe die Bilder von deiner Karte an.',
+  'ich-bin-neu': 'Ich bin neu.',
+  'dein-code': 'Das ist dein neuer Code.',
   // Blitzlesen
   'blitz-schau': 'Schau genau hin!',
   'blitz-bild': 'Welches Bild passt?',

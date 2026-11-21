@@ -13,12 +13,16 @@
 // - Ohne Zeit: Runde mit 10 Wörtern, ein Stern pro richtigem Wort.
 //   Zeitmodus (nur wenn im Lehrkraft-Bereich an): 1 Minute, gezählt werden richtige Wörter pro Minute,
 //   eigener Rekord nur im Arbeitsspeicher.
-// - Schnittstelle: siehe js/module/README.md. zustand.sterne (Sterne der Stufe) wird bewusst NICHT
-//   verändert, solange die Sterne-Regel nicht entschieden ist; die Sterne einer Runde sind nur Anzeige.
+// - Schnittstelle: siehe js/module/README.md. Sterne der Stufe 4 über zaehle() aus sterne.js:
+//   jede RICHTIGE Antwort ist eine Einheit (10 Einheiten = 1 Stern). Die Sterne-Reihe in der Runde
+//   zeigt nur die richtigen Antworten dieser Runde.
 
 import { lesbareWoerter, sichtwoerter, waehle } from '../woerter.js';
 import { hatBild, bildHtml, woerterMitBild } from '../bilder.js';
 import { sprichWort, sprichAnsage, stoppe } from '../audio.js';
+import { zaehle } from '../sterne.js';
+
+const STUFE = 4; // Automatisieren
 
 const RUNDE = 10;                 // Wörter pro Runde ohne Zeit
 const MINUTE = 60_000;
@@ -42,7 +46,7 @@ const SVG = {
   stern: `<svg viewBox="0 0 24 24"><path d="M12 2.5 L14.9 8.6 L21.5 9.3 L16.5 13.8 L17.9 20.3 L12 17 L6.1 20.3 L7.5 13.8 L2.5 9.3 L9.1 8.6 Z"/></svg>`,
 };
 const sterne = (n, voll) => Array.from({ length: n }, (_, i) =>
-  `<span class="stern${i < voll ? ' voll' : ''}">${SVG.stern}</span>`).join('');
+  `<span class="blitz-stern${i < voll ? ' voll' : ''}">${SVG.stern}</span>`).join('');
 const sekunden = ms => `${(ms / 1000).toLocaleString('de-DE')} s`;
 
 // Eigene CSS-Datei des Moduls (einmal einbinden; hält app.css frei von Modul-Regeln)
@@ -280,6 +284,7 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
 
     if (richtig) {
       r.richtig++;
+      zaehle(zustand, STUFE); // nur richtige Antworten zählen für die Sterne der Stufe
       zeigeStern();
     }
     const kurz = r.modus === 'minute';
@@ -292,7 +297,7 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
 
   function zeigeStern() {
     if (r.modus === 'runde') {
-      const stern = behaelter.querySelectorAll('.blitz-leiste .stern')[r.richtig - 1];
+      const stern = behaelter.querySelectorAll('.blitz-leiste .blitz-stern')[r.richtig - 1];
       stern?.classList.add('voll', 'neu');
     } else {
       const zahl = behaelter.querySelector('.blitz-zaehler b');

@@ -1,0 +1,119 @@
+/* Bildercode: Eingabe beim Start, Abschluss mit neuem Code, Sterne auf den Stufen-Kacheln.
+   Eigene Datei, damit app.css für andere Module unberührt bleibt. */
+
+:root {
+  --code-gruen: #4f8a4f;
+  --code-hinweis: #e0a040;
+  --stern-voll: #f2b705;
+  --stern-leer: rgba(0, 0, 0, 0.14);
+}
+
+/* ---------- Ein Code-Bild (Kachel, Platz, Abschluss) ---------- */
+.code-bild, .code-platz {
+  position: relative;
+  flex-direction: column;
+  gap: 0;
+  padding: 6px 6px 4px;
+  border-radius: var(--radius);
+  background: var(--flaeche);
+  line-height: 1.1;
+}
+.code-bild img, .code-platz img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  pointer-events: none;
+}
+.code-zahl {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  min-width: 34px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #ece7dc;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-align: center;
+}
+.code-anlaut { font-size: 22px; color: #555; letter-spacing: 0.08em; }
+
+/* ---------- Eingabe ---------- */
+.code-eingabe .kopf { justify-content: center; flex-wrap: wrap; gap: 16px; margin-bottom: 8px; }
+.code-plaetze { display: flex; gap: 14px; }
+.code-platz { width: 112px; padding: 4px; border-style: dashed; }
+.code-platz.leer { height: 144px; }
+.code-platz.naechster { border-color: var(--akzent); border-style: solid; }
+.code-platz .code-zahl { font-size: 18px; min-width: 28px; }
+.code-platz .code-anlaut { font-size: 18px; }
+
+.code-loeschen svg, .lautsprecher svg { width: 44px; height: 44px; }
+.code-loeschen { height: 96px; width: 96px; }
+.code-neu { height: 96px; font-size: 28px; background: #e9f3e4; border-color: #b9d6ae; }
+.code-neu svg { width: 44px; height: 44px; color: var(--code-gruen); }
+
+.code-hinweis {
+  min-height: 48px;
+  margin: 0 0 8px;
+  text-align: center;
+  font-size: 34px;
+  font-weight: 600;
+  color: #8a5a00;
+}
+.code-eingabe.fehler .code-platz { border-color: var(--code-hinweis); border-style: solid; background: #fff7e8; }
+.code-eingabe.richtig .code-platz { border-color: var(--code-gruen); border-style: solid; background: #eef6ea; }
+
+.code-bilder {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 14px;
+  max-width: 1500px;
+  margin: 0 auto;
+}
+.code-bilder .code-bild { min-width: 0; padding-top: 10px; }
+.code-eingabe.fehler .code-bilder,
+.code-eingabe.richtig .code-bilder { opacity: 0.5; }
+
+/* ---------- Abschluss ---------- */
+.abschluss .kopf { gap: 20px; }
+.abschluss-sterne { display: flex; flex-wrap: wrap; gap: 12px; flex: 1; justify-content: center; }
+.stufen-sterne {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+}
+.stufen-sterne .nr { font-size: 24px; font-weight: 700; opacity: 0.6; }
+.stufen-sterne .stern svg { width: 22px; height: 22px; }
+
+.abschluss-code {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin: 32px 0 24px;
+}
+.code-bild.gross { width: min(17vw, 300px); padding: 14px 10px 8px; }
+.code-bild.gross .code-zahl { font-size: 44px; min-width: 64px; top: 8px; left: 10px; }
+.code-bild.gross .code-anlaut { font-size: 28px; }
+.code-bild.spricht { border-color: var(--akzent); box-shadow: 0 0 0 6px rgba(58, 110, 165, 0.25); }
+
+.abschluss-knoepfe { display: flex; justify-content: center; gap: 32px; }
+.abschluss-knoepfe button { height: 96px; }
+.abschluss-knoepfe .vorlesen { width: 120px; }
+.abschluss-knoepfe .vorlesen svg { width: 52px; height: 52px; }
+.abschluss-knoepfe .ende svg { width: 40px; height: 40px; color: var(--code-gruen); }
+.abschluss-knoepfe .ende:disabled { opacity: 0.35; cursor: default; }
+
+/* ---------- Sterne (Stufen-Kacheln und Abschluss) ---------- */
+.sterne { display: inline-flex; gap: 2px; }
+.stern svg { width: 26px; height: 26px; fill: var(--stern-leer); }
+.stern.voll svg { fill: var(--stern-voll); }
+.kachel .sterne svg { width: 26px; height: 26px; }
+
+/* Fertig-Knopf auf der Startseite */
+.fertig svg { width: 36px; height: 36px; color: var(--code-gruen); }
+
+/* Stufen-Kacheln haben jetzt eine Sternenzeile: Höhe darf mitwachsen */
+.kacheln .kachel { height: auto; min-height: 280px; }
