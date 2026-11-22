@@ -33,7 +33,7 @@
     <div class="knoepfe">
       <button id="lobe">lobe(bereich)</button>
       <button id="stern">feiereStern(bereich)</button>
-      <button id="lese">Einheit lesen: zaehle(zustand, 3)</button>
+      <button id="lese">feiereStern bei neuem Stern (alt, nicht während der Übung)</button>
       <button id="stumm">lobe(bereich, { ansage: false })</button>
     </div>
     <div class="modul-bereich" id="bereich">
@@ -41,6 +41,27 @@
       <span id="getippt" style="font-size:24px">0× getippt</span>
     </div>
     <p id="stand"></p>
+
+    <h2>Runde mit stiller Zählung und Zusammenfassung am Ende</h2>
+    <p>So soll es in allen Modulen laufen: Während der Runde wird still gezählt, am Ende fasst
+      <code>fasseSterneZusammen()</code> die neuen Sterne zusammen. Stufe 2 startet bei 3 Sternen (max. 7).</p>
+    <div class="knoepfe">
+      <button id="r-start">starteRunde(zustand, 2)</button>
+      <button id="r-eins">runde.zaehle()</button>
+      <button id="r-zehn">runde.zaehle(10)</button>
+      <button id="r-ende">Rundenende: fasseSterneZusammen(ergebnis, runde.neu)</button>
+      <button id="r-rekord">… mit { vorweg: ['neuer-rekord'] }</button>
+    </div>
+    <div class="knoepfe">
+      <button data-n="0">Zusammenfassung 0</button>
+      <button data-n="1">Zusammenfassung 1</button>
+      <button data-n="3">Zusammenfassung 3</button>
+      <button data-n="7">Zusammenfassung 7</button>
+    </div>
+    <p id="r-stand"></p>
+    <div class="modul-bereich" id="ergebnis" style="height:auto; min-height:200px; flex-direction:column; font-size:28px">
+      Ergebnis-Bereich
+    </div>
 
     <h2>Tests</h2>
     <ul id="tests"></ul>
@@ -50,8 +71,8 @@
   </main>
 
   <script type="module">
-    import { lobe, feiereStern, naechstesLob } from '../js/belohnung.js';
-    import { zaehle, setzeSpielstand, nochBisStern } from '../js/sterne.js';
+    import { lobe, feiereStern, naechstesLob, fasseSterneZusammen } from '../js/belohnung.js';
+    import { zaehle, setzeSpielstand, nochBisStern, starteRunde } from '../js/sterne.js';
     import { ANSAGEN, LOB_ANSAGEN } from '../js/aufnahmen.js';
     import { sprichAnsage } from '../js/audio.js';
 
@@ -69,6 +90,22 @@
       if (zaehle(zustand, 3)) feiereStern(bereich);
       zeigeStand();
     };
+    // Runde
+    const ergebnis = document.getElementById('ergebnis');
+    let runde = starteRunde(zustand, 2);
+    zustand.sterne[1] = 3;
+    const zeigeRunde = (text = '') => document.getElementById('r-stand').textContent =
+      `Stufe 2: ${zustand.sterne[1]} Sterne, Zähler ${zustand.zaehler[1]}, in dieser Runde neu: ${runde.neu}. ${text}`;
+    zeigeRunde();
+    document.getElementById('r-start').onclick = () => { runde = starteRunde(zustand, 2); zeigeRunde('Neue Runde.'); };
+    document.getElementById('r-eins').onclick = () => { runde.zaehle(); zeigeRunde(); };
+    document.getElementById('r-zehn').onclick = () => { runde.zaehle(10); zeigeRunde(); };
+    const fasse = (n, optionen) => fasseSterneZusammen(ergebnis, n, { ...optionen, danach: () => zeigeRunde('Zusammenfassung fertig gesprochen.') })
+      .then(ok => ok || zeigeRunde('Zusammenfassung abgebrochen.'));
+    document.getElementById('r-ende').onclick = () => fasse(runde.neu);
+    document.getElementById('r-rekord').onclick = () => fasse(runde.neu, { vorweg: ['neuer-rekord'] });
+    document.querySelectorAll('[data-n]').forEach(b => b.onclick = () => fasse(Number(b.dataset.n)));
+
     let n = 0;
     document.getElementById('silbe').onclick = () => document.getElementById('getippt').textContent = `${++n}× getippt`;
 
@@ -92,6 +129,22 @@
     pruefe('Zeichen lässt Fingertipps durch', getComputedStyle(probe.querySelector('.belohnung')).pointerEvents === 'none');
     feiereStern(probe, { ansage: false });
     pruefe('Stern ersetzt Lob', probe.querySelector('.belohnung.neuer-stern') && !probe.querySelector('.belohnung.lob'));
+    // Zusammenfassung: Reihe zeigen, ohne zu sprechen (Behälter wird sofort entfernt → Abbruch)
+    const zf = document.createElement('div');
+    document.body.append(zf);
+    const p3 = fasseSterneZusammen(zf, 3);
+    pruefe('Zusammenfassung 3: Reihe mit 3 Sternen', zf.querySelectorAll('.belohnung-sterne .belohnung-sterne-stern').length === 3);
+    fasseSterneZusammen(zf, 1);
+    pruefe('neue Zusammenfassung ersetzt die alte Reihe', zf.querySelectorAll('.belohnung-sterne').length === 1
+      && zf.querySelectorAll('.belohnung-sterne-stern').length === 1);
+    const p0 = fasseSterneZusammen(zf, 0);
+    pruefe('Zusammenfassung 0: keine Reihe, stattdessen Lob-Zeichen',
+      !zf.querySelector('.belohnung-sterne') && !!zf.querySelector('.belohnung.lob'));
+    zf.remove();
+    Promise.all([p3, p0]).then(([a, b]) => pruefe('abgebrochen, wenn Behälter weg ist oder neu gestartet wird', a === false && b === false));
+    pruefe('Ansagen der Zusammenfassung vorhanden', ['sterne-du-hast', 'sterne-neue-bekommen', 'sterne-einen-neuen',
+      'zahl-2', 'zahl-7'].every(id => ANSAGEN[id]));
+
     setTimeout(() => {
       pruefe('Zeichen verschwindet von selbst', probe.querySelectorAll('.belohnung').length === 0);
       probe.remove();
@@ -100,7 +153,7 @@
     document.getElementById('tests').innerHTML = tests.join('') + '<li>(warte 2,5 s auf den letzten Test …)</li>';
 
     // Ansagen zum Anhören
-    const ids = [...LOB_ANSAGEN, 'neuer-stern', 'geschafft', 'neuer-rekord', 'noch-einmal'];
+    const ids = [...LOB_ANSAGEN, 'sterne-einen-neuen', 'sterne-du-hast', 'sterne-neue-bekommen', 'neuer-stern', 'geschafft', 'neuer-rekord', 'noch-einmal'];
     document.getElementById('ansagen').innerHTML = ids.map(id => `<button data-id="${id}">▶ ${ANSAGEN[id]}</button>`).join('');
     document.getElementById('ansagen').onclick = e => { const b = e.target.closest('button'); if (b) sprichAnsage(b.dataset.id); };
   </script>
