@@ -81,6 +81,8 @@ export const ANSAGEN = Object.freeze({
   'geschafft': 'Geschafft!',
   'neuer-rekord': 'Neuer Rekord!',
   'noch-einmal': 'Versuch es noch einmal.',
+  // Leseapparat
+  'leseapparat-anleitung': 'Wisch einen Streifen weiter und hör zu. Dann fahr mit dem Finger den Bogen entlang und lies selbst.',
 });
 
 /** Ansage-id eines Modulnamens, z. B. 'Wo hörst du es?' → 'modul-wo-hoerst-du-es'. */

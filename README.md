@@ -46,6 +46,7 @@ Lesen und Schreiben der Parameter steht in `js/config.js`.
 | `assets/audio/` | eigene Aufnahmen (Anleitung: `docs/AUFNAHMEN.md`) |
 | `assets/fonts/` | lokale Schriften |
 | `test/aufnahmen.html` | Aufnahmeliste: welche Aufnahmen vorhanden sind, welche fehlen |
+| `test/leseapparat.html` | Modul Leseapparat direkt starten (z. B. `?b=12&h=bfk`) |
 | `test/woerter.html` | Testseite: lesbare Wörter und Silben je Buchstabenstand, Laute anhören |
 
 ## Veröffentlichung

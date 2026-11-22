@@ -1,0 +1,170 @@
+/* Modul „Leseapparat“ – eigene Gestaltung.
+   Wird von js/module/leseapparat.js nachgeladen, damit css/app.css unverändert bleibt.
+   --A ist die Breite vom linken Fensterrand bis zum rechten Fensterrand:
+   Fenster je 34 %, Abstand 32 % → Fenstermitten bei 17 % und 83 % (wie der Bogen im SVG). */
+
+.la-apparat {
+  --vokal: #d0342c;          /* Vokale farbig (rot) */
+  --konsonant: #1d3f6e;
+  --punkt: #f2a900;
+  --A: min(72vw, calc((100vh - 250px) / 0.62));
+  --fh: calc(var(--A) * 0.40);     /* Fensterhöhe */
+  --zeile: calc(var(--A) * 0.22);  /* Höhe eines Buchstabens im Streifen */
+  display: grid;
+  grid-template-columns: auto calc(var(--A) * 0.34) calc(var(--A) * 0.32) calc(var(--A) * 0.34) auto;
+  grid-template-rows: var(--fh) calc(var(--A) * 0.2) auto;
+  column-gap: 0;
+  row-gap: 0;
+  justify-content: center;
+  align-items: center;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------- Fenster mit Streifen ---------- */
+.la-fenster {
+  position: relative;
+  height: var(--fh);
+  overflow: hidden;
+  border-radius: calc(var(--A) * 0.05);
+  background: var(--flaeche);
+  border: 6px solid #c9d6e6;
+  box-shadow: inset 0 0 0 6px #fff, 0 6px 0 rgba(0, 0, 0, 0.08);
+  touch-action: none;
+  cursor: grab;
+  transition: border-color 200ms, box-shadow 200ms;
+  /* oberer und unterer Nachbar nur angedeutet */
+  -webkit-mask-image: linear-gradient(transparent 0, #000 26%, #000 74%, transparent 100%);
+  mask-image: linear-gradient(transparent 0, #000 26%, #000 74%, transparent 100%);
+}
+.la-fenster.la-einzeln { cursor: default; }
+.la-konsonant { grid-column: 2; grid-row: 1; }
+.la-vokal { grid-column: 4; grid-row: 1; border-color: #f0c7c3; background: #fff8f7; }
+.la-fenster.la-aktiv { border-color: var(--punkt); box-shadow: inset 0 0 0 6px #fff4d6, 0 0 0 6px #ffe3a0; }
+
+.la-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc((var(--fh) - var(--zeile)) / 2 - 2 * var(--zeile));
+  will-change: transform;
+}
+.la-zeichen {
+  height: var(--zeile);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--A) * 0.19);
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--konsonant);
+  opacity: 0.35;
+}
+.la-zeichen.la-jetzt { opacity: 1; }
+.la-vokal .la-zeichen { color: var(--vokal); }
+
+.la-krone {
+  position: absolute;
+  top: 25%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(var(--A) * 0.07);
+  z-index: 1;
+}
+.la-krone svg { width: 100%; height: auto; display: block; }
+
+/* ---------- Pfeile neben den Fenstern ---------- */
+.la-seite {
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 0 20px;
+}
+.la-seite-links { grid-column: 1; }
+.la-seite-rechts { grid-column: 5; }
+.la-pfeil { width: 80px; height: 80px; padding: 0; border-radius: 50%; }
+.la-pfeil svg { width: 44px; height: 44px; }
+.la-pfeil[hidden] { display: none; }
+
+/* ---------- Bogen und Punkt ---------- */
+.la-bogen {
+  grid-column: 2 / 5;
+  grid-row: 2;
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+  touch-action: none;
+}
+.la-bogen path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.la-bogen-k { stroke: #b7c7dc; stroke-width: 14; }
+.la-bogen-v { stroke: #efbcb7; stroke-width: 14; }
+.la-spitze { stroke: #efbcb7; stroke-width: 14; }
+.la-spur { stroke: var(--punkt); stroke-width: 14; opacity: 0.7; }
+
+.la-punkt { cursor: grab; }
+.la-punkt-griff { fill: transparent; }
+.la-punkt-kreis { fill: var(--punkt); stroke: #a87b00; stroke-width: 5; }
+.la-punkt.la-wink .la-punkt-kreis { animation: la-wink 1.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes la-wink {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+}
+
+.la-silbe {
+  font-family: var(--schrift);
+  font-size: 92px;
+  letter-spacing: 2px;
+  opacity: 0;
+  transition: opacity 250ms;
+  cursor: pointer;
+}
+.la-silbe.la-sichtbar { opacity: 1; }
+.la-silbe .la-k { fill: var(--konsonant); }
+.la-silbe .la-v { fill: var(--vokal); }
+
+/* ---------- Knöpfe unten ---------- */
+.la-knoepfe {
+  grid-column: 1 / 6;
+  grid-row: 3;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  margin-top: 8px;
+}
+.la-knoepfe button svg { width: 40px; height: 40px; }
+.la-hoeren { width: 96px; }
+.la-modus, .la-gross { font-size: 24px; }
+.la-gross[aria-pressed="true"] { background: #dcebdc; border-color: #4f8a4f; }
+.la-spricht .la-hoeren { border-color: var(--punkt); }
+
+/* ---------- Rundenzusammenfassung: zwischen den Fenstern ---------- */
+.la-mitte { grid-column: 3; grid-row: 1; align-self: stretch; position: relative; }
+.la-ergebnis {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* ---------- Fortschritt (in der Knopfzeile unten) ---------- */
+.la-anleitung { font-weight: 600; }
+.la-fortschritt { margin-left: 24px; display: flex; align-items: center; gap: 20px; }
+.la-pips { display: flex; gap: 8px; }
+.la-pip { width: 18px; height: 18px; border-radius: 50%; border: 3px solid #d8c48a; }
+.la-pip.la-voll { background: var(--punkt); border-color: #a87b00; }
+.la-sterne { display: flex; align-items: center; gap: 6px; font-size: 32px; }
+.la-sterne svg { width: 48px; height: 48px; }
+
+.la-hinweis { font-size: 28px; max-width: 900px; }
+
+/* Digiboard: alles etwas größer */
+@media (min-width: 1600px) {
+  .la-pfeil { width: 104px; height: 104px; }
+  .la-pfeil svg { width: 56px; height: 56px; }
+}
