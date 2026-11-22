@@ -13,7 +13,7 @@ import { BUCHSTABEN, GEWICHT_NEUER_BUCHSTABE } from '../config.js';
 import { lesbareSilben, neuestesGraphem } from '../woerter.js';
 import { sprich, sprichAnsage, kannSprechen, stoppe } from '../audio.js';
 import { zaehle } from '../sterne.js';
-import { lobe, feiereStern } from '../belohnung.js';
+import { lobe } from '../belohnung.js';
 
 const STUFE = 4; // Silbenteppich gehört zu Stufe 4 · Automatisieren (für die Sterne)
 
@@ -29,6 +29,8 @@ const MINUTE_MS = 60_000;
 const MINDESTZEIT_MS = 500;
 // Grundvokale stehen im geordneten Teppich immer als Spalten da (Entscheidung Anna)
 const GRUNDVOKALE = ['a', 'e', 'i', 'o', 'u'];
+// Lob zur Halbzeit der Runde (Entscheidung Anna). Wirkt es unruhig: auf false setzen.
+const LOB_ZUR_HALBZEIT = true;
 // Reihenfolge der Vokal-Spalten wie auf dem Arbeitsblatt (A E I O U), weitere Vokale danach
 const VOKAL_FOLGE = ['a', 'e', 'i', 'o', 'u', 'ei', 'au', 'eu', 'ie', 'ä', 'ö', 'ü'];
 
@@ -285,7 +287,9 @@ export function starte(wurzel, { einstellungen, zustand }) {
     let takt = null;
     let aktuellSeit = performance.now(); // seit wann die aktuelle Silbe hervorgehoben ist
     const gezaehlt = new Set();          // in diesem Durchgang schon gezählte Felder (kein Doppeltzählen nach ↶)
-    let sternZuletzt = false;            // gab der letzte Tipp einen neuen Stern? (dann kein Lob darüber)
+    let neueSterne = 0;                  // in diesem Durchgang neu gewonnene Sterne (still gezählt)
+    let halbzeitGelobt = !LOB_ZUR_HALBZEIT;
+    let vorsprechen = null;              // läuft gerade das Vorsprechen (Lautsprecher)? Promise oder null
 
     let n = 0;
     const spalten = Math.max(...zeilen.map(z => z.length));
@@ -344,6 +348,7 @@ export function starte(wurzel, { einstellungen, zustand }) {
         const rest = Math.max(0, MINUTE_MS - vergangen);
         $('.st-uhr').textContent = zeitText(rest + 999);
         $('.st-balken span').style.width = `${(rest / MINUTE_MS) * 100}%`;
+        if (!halbzeitGelobt && vergangen >= MINUTE_MS / 2) lobeZurHalbzeit(); // Halbzeit = 30 s
         if (rest === 0) beende();
       } else {
         $('.st-uhr').textContent = zeitText(vergangen);
@@ -363,32 +368,66 @@ export function starte(wurzel, { einstellungen, zustand }) {
         gezaehlt.add(i);
         silbeGelesen();
       }
-      else sternZuletzt = false;
       aktuellSeit = jetzt;
       gelesen++;
       if (modus === 'minute') $('.st-zaehler').textContent = gelesen;
-      if (i < felder.length - 1) { i++; markiere(); return; }
+      if (i < felder.length - 1) {
+        i++;
+        markiere();
+        // Halbzeit = die Hälfte der Felder ist gelesen (1-Minuten-Modus: nach 30 s, siehe tick)
+        if (modus !== 'minute' && !halbzeitGelobt && i >= Math.ceil(felder.length / 2)) lobeZurHalbzeit();
+        return;
+      }
       if (modus === 'minute') { i = 0; gezaehlt.clear(); markiere(); return; } // Teppich zu Ende: oben weiterlesen
       beende();
     }
 
     // >>> STERNE: Eine wirklich gelesene Silbe zählt als Einheit für Stufe 4
     // (10 Einheiten = 1 Stern; ein Zähler je Stufe, zählt über Runden und Module weiter, sterne.js).
+    // Während des Lesens wird NICHT gefeiert (Entscheidung Anna: sonst unruhig) – nur still gezählt;
+    // die neuen Sterne nennt die Zusammenfassung am Rundenende.
     function silbeGelesen() {
-      sternZuletzt = zaehle(zustand, STUFE) > 0;
-      if (sternZuletzt) feiereStern(wurzel);
+      neueSterne += zaehle(zustand, STUFE);
     }
 
-    // >>> LOB: VORLÄUFIG nur am Rundenende (Annas Entscheidung zur Lob-Häufigkeit steht noch aus).
-    // Wer öfter loben will, ruft lobe(wurzel) z. B. zusätzlich am Ende jeder Zeile auf.
+    // >>> LOB (Entscheidung Anna): zur Halbzeit der Runde (abschaltbar: LOB_ZUR_HALBZEIT) und am Rundenende.
+    // Läuft gerade das Vorsprechen, wartet das Lob, bis es zu Ende ist (nichts wird abgeschnitten).
+    const nachVorsprechen = fn => (vorsprechen ? vorsprechen.then(fn) : fn());
+    const ergebnisSichtbar = () => {
+      const ende = wurzel.querySelector('.st-ende');
+      return wurzel.isConnected && ende && !ende.hidden && ende.dataset.lauf === lauf;
+    };
+    const lauf = String(Math.random()); // Kennung dieses Durchgangs (gegen verspätete Ansagen nach „Noch einmal“)
+
+    function lobeZurHalbzeit() {
+      halbzeitGelobt = true;
+      nachVorsprechen(() => { if (laeuft && !fertig && wurzel.isConnected) lobe(wurzel); });
+    }
+
+    /** Ansagen nacheinander sprechen, solange das Ergebnis dieses Durchgangs zu sehen ist. */
+    async function sprichNacheinander(ids) {
+      for (const id of ids) {
+        if (!ergebnisSichtbar()) return;
+        await sprichAnsage(id);
+      }
+    }
+
+    // Ruhige Zusammenfassung am Rundenende: (Zeit um / neuer Rekord,) dann
+    // „Du hast in dieser Übung … neue Sterne bekommen.“ – oder bei 0 neuen Sternen ein Lob.
     function lobeAmRundenende(neuerRekord) {
-      if (sternZuletzt) return;                                    // der neue Stern ist gerade zu sehen
-      if (neuerRekord) return lobe(wurzel, { ansage: 'neuer-rekord' });
-      if (modus === 'minute') return sprichAnsage('zeit-um').then(() => {
-        const ende = wurzel.querySelector('.st-ende');                // nur, wenn das Ergebnis noch zu sehen ist
-        if (wurzel.isConnected && ende && !ende.hidden) lobe(wurzel);
+      nachVorsprechen(async () => {
+        if (!ergebnisSichtbar()) return;
+        const vorweg = [modus === 'minute' && !neuerRekord && 'zeit-um', neuerRekord && 'neuer-rekord'].filter(Boolean);
+        if (neueSterne === 0) {
+          await sprichNacheinander(vorweg);
+          if (ergebnisSichtbar()) lobe(wurzel);                    // abwechselnd „Toll gemacht!“, „Prima!“ …
+          return;
+        }
+        lobe(wurzel, { ansage: false });                           // nur das ruhige Zeichen, gesprochen wird unten
+        const satz = neueSterne === 1 ? ['sterne-einen-neuen']
+          : ['sterne-du-hast', `zahl-${neueSterne}`, 'sterne-neue-bekommen'];
+        await sprichNacheinander([...vorweg, ...satz]);
       });
-      return lobe(wurzel);                                         // abwechselnd „Toll gemacht!“, „Prima!“ …
     }
 
     function schrittZurueck() {
@@ -423,15 +462,18 @@ export function starte(wurzel, { einstellungen, zustand }) {
       const ende = $('.st-ende');
       ende.innerHTML = `
         <div class="st-ergebnis">
-          ${neuerRekord ? SYMBOL.pokal : SYMBOL.stern}
+          ${neuerRekord ? SYMBOL.pokal : neueSterne ? '' : SYMBOL.stern}
           ${ergebnis}
         </div>
+        ${neueSterne ? `<div class="st-neue-sterne" aria-label="${neueSterne} neue Sterne">
+          ${SYMBOL.stern.repeat(neueSterne)}</div>` : ''}
         <div class="st-knoepfe">
           <button data-aktion="nochmal" aria-label="Noch einmal">↻</button>
           <button data-aktion="neu" aria-label="Neuer Teppich">${SYMBOL.teppich}</button>
           <button data-aktion="auswahl" aria-label="Andere Übungsart wählen">${SYMBOL.auswahl}</button>
         </div>`;
       ende.hidden = false;
+      ende.dataset.lauf = lauf;
       ende.classList.toggle('rekord', neuerRekord);
       lobeAmRundenende(neuerRekord);
     }
@@ -440,7 +482,11 @@ export function starte(wurzel, { einstellungen, zustand }) {
       if (e.target.closest('.st-auswahl')) return zeigeAuswahl();
       if (e.target.closest('.st-start')) return start();
       if (e.target.closest('.st-schritt')) return schrittZurueck();
-      if (e.target.closest('.st-vorlesen')) return sprich(felder[i].art, felder[i].wert);
+      if (e.target.closest('.st-vorlesen')) {
+        const p = sprich(felder[i].art, felder[i].wert).finally(() => { if (vorsprechen === p) vorsprechen = null; });
+        vorsprechen = p;
+        return;
+      }
       const aktion = e.target.closest('[data-aktion]')?.dataset.aktion;
       if (aktion === 'nochmal') { sprichAnsage('noch-einmal-lesen'); return zeigeTeppich(modus); }
       if (aktion === 'auswahl') return zeigeAuswahl();

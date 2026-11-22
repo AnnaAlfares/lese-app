@@ -81,6 +81,11 @@ export const ANSAGEN = Object.freeze({
   'zeit-um': 'Die Zeit ist um.',
   'noch-einmal-lesen': 'Noch einmal lesen',
   'neuer-teppich': 'Neuer Teppich',
+  // Zusammenfassung am Rundenende (für alle Module nutzbar), mit zahl-2 … zahl-7 dazwischen:
+  // „Du hast in dieser Übung“ + „fünf“ + „neue Sterne bekommen.“
+  'sterne-du-hast': 'Du hast in dieser Übung',
+  'sterne-neue-bekommen': 'neue Sterne bekommen.',
+  'sterne-einen-neuen': 'Du hast in dieser Übung einen neuen Stern bekommen.',
 });
 
 /** Ansage-id eines Modulnamens, z. B. 'Wo hörst du es?' → 'modul-wo-hoerst-du-es'. */
