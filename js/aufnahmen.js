@@ -87,18 +87,18 @@ export const modulAnsage = name => `modul-${dateiStamm(name)}`;
  *   wert: Schlüssel, mit dem die App die Aufnahme anfragt (Graphem-id, Silbe, Wort, Ansage-id)
  *   sprechtext: was gesprochen wird; hinweis: wie; ab: ab welchem Buchstabenstand gebraucht
  */
-export function aufnahmeliste(stand = BUCHSTABEN.length) {
+export function aufnahmeliste(stand = BUCHSTABEN.length, optionen) {
   const liste = [];
   BUCHSTABEN.slice(0, stand).forEach((b, i) => liste.push({
     art: 'laut', wert: b.id, datei: datei('laut', b.id), ab: i + 1,
     sprechtext: `/${b.id}/ ${b.beispiel}`,
     hinweis: lautHinweis(b.id),
   }));
-  for (const s of lesbareSilben(stand).sort((a, b) => a.ab - b.ab || a.text.localeCompare(b.text))) {
+  for (const s of lesbareSilben(stand, optionen).sort((a, b) => a.ab - b.ab || a.text.localeCompare(b.text))) {
     liste.push({ art: 'silbe', wert: s.text, datei: datei('silbe', s.text), ab: s.ab,
       sprechtext: s.text, hinweis: 'normal, deutlich' });
   }
-  const woerter = lesbareWoerter(stand).sort((a, b) => a.ab - b.ab || a.rang - b.rang);
+  const woerter = lesbareWoerter(stand, optionen).sort((a, b) => a.ab - b.ab || a.rang - b.rang);
   for (const w of woerter) {
     liste.push({ art: 'wort', wert: w.wort, datei: datei('wort', w.wort), ab: w.ab,
       sprechtext: w.wort, hinweis: 'normal, deutlich' });

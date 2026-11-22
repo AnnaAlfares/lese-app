@@ -33,6 +33,7 @@
 <body>
   <main>
     <h1>Testseite: lesbare Wörter je Buchstabenstand</h1>
+    <p><b>Wörter mit ie:</b> <span id="ie-stand"></span> <a id="ie-umschalten" href="#"></a></p>
     <p>Gelb = enthält den zuletzt eingeführten Buchstaben (wird bevorzugt). Gestrichelt = Sichtwort, kursiv-lila = Sichtwort als Ganzwort (noch nicht alle Buchstaben eingeführt).
       Wörter und Silben antippen zum Anhören (Aufnahme oder Gerätestimme); Laute nur mit Aufnahme.
       <span id="stimme"></span></p>
@@ -65,7 +66,7 @@
   <script type="module">
     import { BUCHSTABEN } from '../js/config.js';
     import { lesestoff, pruefeWortliste, alleWoerter, aussortiert } from '../js/woerter.js';
-    import { NICHT_BASISGRAPHEME, VOKALE_NACH_QU } from '../js/config.js';
+    import { NICHT_BASISGRAPHEME, VOKALE_NACH_QU, leseEinstellungen } from '../js/config.js';
     import { aktiviereSprechknoepfe, stimmeBereit, kannSprechen } from '../js/audio.js';
 
     const wortSpan = (w, neu, sicht = false, ganz = false) =>
@@ -86,6 +87,12 @@
         + neu.map(([art, t, grund]) => `<span class="w raus" title="${art}: ${grund}">${t}</span>`).join('')
         + `<br><small>${[...new Set(neu.map(([, , g]) => g))].join('; ')}</small></details>`;
     }
+    // Schalter „Wörter mit ie erlauben“ wie in der App: aus der Adresse (ie=1); woerter.js liest ihn selbst
+    const ieAn = leseEinstellungen().ieErlaubt;
+    document.getElementById('ie-stand').textContent = ieAn ? 'erlaubt (ab Stand 25).' : 'aussortiert (Standard).';
+    const umschalten = document.getElementById('ie-umschalten');
+    umschalten.href = `?ie=${ieAn ? 0 : 1}`;
+    umschalten.textContent = ieAn ? 'Ansicht ohne ie' : 'Ansicht mit ie (ie=1)';
     document.getElementById('regel').textContent =
       `Nicht-Basisgrapheme: ${[...NICHT_BASISGRAPHEME].join(', ')}. Qu nur vor: ${[...VOKALE_NACH_QU].join(', ')}.`;
 
