@@ -25,9 +25,10 @@ import { lobe, feiereStern } from '../belohnung.js';
 
 const STUFE = 3; // Leseapparat gehört zu Stufe 3 „Laute verbinden“
 
-// VORLÄUFIG (Entscheidung zur Lob-Häufigkeit steht aus): gelobt wird am Rundenende,
-// eine Runde = so viele selbst gelesene Silben. Zum Ändern nur hier und in rundenEnde() anpassen.
+// Lob (Entscheidung Anna): zur Hälfte der Runde und am Rundenende.
+// Eine Runde = so viele selbst gelesene Silben. Zum Ändern nur hier und in lobZeitpunkt() anpassen.
 const SILBEN_JE_RUNDE = 10;
+const LOB_NACH = [Math.ceil(SILBEN_JE_RUNDE / 2), SILBEN_JE_RUNDE]; // nach 5 und nach 10 Silben
 
 // Geometrie des Bogens (SVG-Koordinaten, viewBox 0 0 1000 200).
 // Die Fenstermitten liegen bei 17 % und 83 % der Breite (siehe css/leseapparat.css).
@@ -348,13 +349,14 @@ export function starte(behaelter, { einstellungen, zustand } = {}) {
     setzePunkt(1);
     markiere(null);
     zeichneSilbe(true);
-    let neuerStern = false, rundeFertig = false;
+    let neuerStern = false, lob = false;
     if (!s.gezaehlt) {
       // zählt nur, wenn das Kind den Punkt selbst über den Bogen gezogen hat, je Silbe einmal
       s.gezaehlt = true;
       neuerStern = zaehle(zustand, STUFE) > 0;
       s.runde++;
-      if (s.runde >= SILBEN_JE_RUNDE) { s.runde = 0; rundeFertig = true; }
+      lob = lobZeitpunkt(s.runde);
+      if (s.runde >= SILBEN_JE_RUNDE) s.runde = 0;
       zeichneFortschritt(neuerStern);
     }
     // Kontrolle bzw. Bestätigung: die Silbe einmal hören, danach Stern bzw. Lob
@@ -362,14 +364,14 @@ export function starte(behaelter, { einstellungen, zustand } = {}) {
     // Hat das Kind schon weitergewischt, nur zeigen und nicht sprechen (sonst wird das Vormachen unterbrochen)
     const still = token !== s.token ? { ansage: false } : {};
     if (neuerStern) feiereStern(behaelter, still);
-    else if (rundeFertig) rundenEnde(still);
+    else if (lob) lobe(behaelter, still); // fällt Lob mit neuem Stern zusammen, nur den Stern feiern
     if (token !== s.token) return;
     s.vorgemacht = true;
   }
 
-  /** VORLÄUFIG: Lob am Ende einer Runde (SILBEN_JE_RUNDE selbst gelesene Silben). */
-  function rundenEnde(optionen) {
-    lobe(behaelter, optionen);
+  /** Wird nach dieser Silbe der Runde gelobt? (Hälfte und Ende der Runde) */
+  function lobZeitpunkt(silbeDerRunde) {
+    return LOB_NACH.includes(silbeDerRunde);
   }
 
   // ---------- Streifen wischen ----------
