@@ -26,9 +26,11 @@ import { MAX_STERNE } from '../bildercode.js';
 
 const STUFE = 3; // Rutschen gehört zu Stufe 3 (Laute verbinden): zählt für deren Sterne
 
-// LOB: VORLÄUFIG nur am Rundenende (Annas Entscheidung zur Häufigkeit steht noch aus).
-// true = zusätzlich nach jeder gelesenen Silbe bzw. jedem Wort loben.
-const LOB_JE_AUFGABE = false;
+// LOB (Entscheidung Anna): zur Motivation einmal mittendrin, wenn die Hälfte der Runde geschafft ist,
+// und am Rundenende. Fällt die Hälfte mit einem neuen Stern zusammen, wird nur der Stern gefeiert.
+// Das Lob kommt erst, nachdem die Silbe bzw. das Wort fertig vorgesprochen ist.
+const LOB_ZUR_HAELFTE = true;
+const LOB_AB_AUFGABEN = 4; // in sehr kurzen Runden (z. B. nur „Mama“ bei Stand 4) kein Lob mittendrin
 
 // ---------------------------------------------------------------------------
 // Auswahl des Lesestoffs (Wörter und Silben kommen aus woerter.js)
@@ -228,8 +230,10 @@ export function starte(wurzel, { einstellungen, zustand, zurueck } = {}) {
         // Jetzt liest das Kind selbst: Silbe/Wort groß zeigen, dann „weiter“
         el.classList.add('geschafft');
         // STERNE: Eine Einheit ist gelesen (Silbe bzw. Wort, selbst gerutscht) → zentraler Zähler
+        const haelfte = LOB_ZUR_HAELFTE && aufgaben.length >= LOB_AB_AUFGABEN
+          && nr + 1 === Math.ceil(aufgaben.length / 2);
         if (zustand && zaehle(zustand, STUFE)) feiereStern(wurzel);
-        else if (LOB_JE_AUFGABE) lobe(wurzel);
+        else if (haelfte) lobe(wurzel);          // LOB mittendrin
         else if (nr === 0) sprichAnsage('rutschen-jetzt-du');
       }
     }
@@ -249,7 +253,7 @@ export function starte(wurzel, { einstellungen, zustand, zurueck } = {}) {
             </div>
           </div>
         </div>`;
-      lobe(wurzel); // LOB am Rundenende (siehe LOB_JE_AUFGABE)
+      lobe(wurzel); // LOB am Rundenende
       wurzel.querySelector('.nochmal-runde').onclick = () => starteRunde(teil);
       wurzel.querySelector('.zur-auswahl').onclick = zeigeAuswahl;
       wurzel.querySelector('.fertig-knopf')?.addEventListener('click', () => { schliessen(); zurueck(); });
