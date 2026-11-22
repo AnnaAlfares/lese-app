@@ -1,0 +1,70 @@
+/* Modul „Rutschen“ – wird von js/module/rutschen.js nachgeladen. */
+
+/* Ausnahme vom Präfix: blendet die Fußzeile der Seite aus, solange das Modul offen ist */
+body:has(.rutsch-modul) footer { display: none; }
+
+.rutsch-modul { display: flex; flex-direction: column; }
+.rutsch-leiste { display: flex; justify-content: center; margin-bottom: 8px; }
+
+/* Auswahl Silben / Wörter */
+.rutsch-teil { background: #d3e4f5; width: 340px; }
+.rutsch-teil .rutsch-symbol { width: auto; height: 130px; }
+.rutsch-teil .rutsch-symbol-text { font-size: 48px; font-weight: 600; letter-spacing: 0.08em; }
+.rutsch-teil:disabled { opacity: 0.35; box-shadow: none; }
+.rutsch-hinweis { font-size: 22px; color: #666; text-align: center; }
+
+/* Fortschritt der Runde */
+.rutsch-punkte { display: flex; gap: 14px; height: 40px; align-items: center; }
+.rutsch-punkt { width: 22px; height: 22px; border-radius: 50%; border: 3px solid #b9c9da; }
+.rutsch-punkt.rutsch-voll { background: #6f97c2; border-color: #6f97c2; }
+
+/* Rutschen */
+.rutsch-bahnen { flex: 1; display: flex; justify-content: center; align-items: center; gap: 8px; }
+.rutsch-feld { transition: opacity 0.3s; }
+.rutsch-feld:not(.rutsch-dran):not(.rutsch-gerutscht) { opacity: 0.35; }
+.rutsch-bild {
+  display: block;
+  height: auto;
+  /* so groß wie möglich: passt in die Höhe (Kopf und Ergebniszeile abziehen) und in die Breite */
+  width: min(calc((100vw - 140px) / var(--anzahl, 1)), calc((100vh - 360px) * 360 / 470));
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.rutsch-bild .rutsch-bahn-grund { fill: none; stroke: #e9e2d3; stroke-width: 58; stroke-linecap: round; }
+.rutsch-bild .rutsch-bahn-weg { fill: none; stroke: var(--farbe); stroke-opacity: 0.35; stroke-width: 58; stroke-linecap: round; }
+.rutsch-bild .rutsch-laut { font-family: var(--schrift); font-size: 120px; font-weight: 600; text-anchor: middle; fill: var(--farbe); }
+.rutsch-bild .rutsch-leuchte { fill: var(--neu); opacity: 0; transition: opacity 0.15s; }
+.rutsch-bild.rutsch-klingt-k .rutsch-leuchte-k,
+.rutsch-bild.rutsch-klingt-v .rutsch-leuchte-v { opacity: 1; }
+.rutsch-bild .rutsch-haltespur { font-family: var(--schrift); font-size: 44px; font-weight: 600; text-anchor: middle; fill: var(--farbe); opacity: 0.25; }
+.rutsch-bild.rutsch-klingt-k .rutsch-haltespur { opacity: 0.55; }
+.rutsch-bild .rutsch-landung { fill: #e9e2d3; }
+.rutsch-bild .rutsch-kugel { fill: #fff; stroke: var(--farbe); stroke-width: 8; }
+.rutsch-feld.rutsch-dran .rutsch-bild:not(.rutsch-aktiv):not(.rutsch-gerutscht) .rutsch-kugel { animation: rutsch-wippen 1.6s ease-in-out infinite; }
+.rutsch-bild.rutsch-aktiv .rutsch-kugel { fill: var(--neu); }
+@keyframes rutsch-wippen { 50% { stroke-width: 16; } }
+
+/* Ergebniszeile: Silbe/Wort zum Selberlesen */
+.rutsch-ergebnis { display: flex; justify-content: center; align-items: center; gap: 32px; min-height: 120px; }
+.rutsch-ergebnis .rutsch-lesewort, .rutsch-ergebnis .rutsch-vorlesen, .rutsch-ergebnis .rutsch-weiter { visibility: hidden; }
+.rutsch-geschafft .rutsch-ergebnis .rutsch-lesewort, .rutsch-geschafft .rutsch-ergebnis .rutsch-vorlesen, .rutsch-geschafft .rutsch-ergebnis .rutsch-weiter { visibility: visible; }
+.rutsch-lesewort { display: flex; font-size: 88px; font-weight: 600; letter-spacing: 0.08em; line-height: 1.1; }
+.rutsch-lesewort.rutsch-mit-boegen .rutsch-silbe {
+  padding: 0 8px 10px;
+  border-bottom: 5px solid currentColor;
+  border-radius: 0 0 50% 50% / 0 0 24px 24px;
+}
+.rutsch-ergebnis svg { width: 48px; height: 48px; }
+.rutsch-ergebnis .rutsch-weiter { min-width: 120px; min-height: 96px; background: #dcebdc; border-color: #4f8a4f; }
+.rutsch-ergebnis .rutsch-weiter svg { width: 64px; height: 64px; }
+
+.rutsch-ende { flex: 1; min-height: 55vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 48px; }
+/* Platz für die Sterne-Zusammenfassung (belohnung.js) */
+.rutsch-ende-sterne { min-height: 140px; display: flex; justify-content: center; align-items: center; }
+.rutsch-knoepfe { display: flex; gap: 32px; }
+.rutsch-knoepfe button { min-width: 120px; min-height: 96px; }
+.rutsch-nochmal-runde svg, .rutsch-fertig svg { width: 64px; height: 64px; }
+.rutsch-fertig { background: #dcebdc; border-color: #4f8a4f; }
+.rutsch-zur-auswahl .rutsch-symbol { width: auto; height: 56px; }
+.rutsch-zur-auswahl .rutsch-symbol-text { display: none; }

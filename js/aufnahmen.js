@@ -88,6 +88,9 @@ export const ANSAGEN = Object.freeze({
   'zeit-um': 'Die Zeit ist um.',
   'noch-einmal-lesen': 'Noch einmal lesen',
   'neuer-teppich': 'Neuer Teppich',
+  // Modul Rutschen
+  'rutschen-anleitung': 'Leg deinen Finger auf die Kugel und rutsch langsam hinunter. Sprich mit!',
+  'rutschen-jetzt-du': 'Jetzt lies du.',
 });
 
 /** Ansage-id eines Modulnamens, z. B. 'Wo hörst du es?' → 'modul-wo-hoerst-du-es'. */
