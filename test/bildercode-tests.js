@@ -4,7 +4,7 @@
 import { BILDER, kodiere, dekodiere, pruefbild, gfMal } from '../js/bildercode.js';
 import { CODEBILDER } from '../js/aufnahmen.js';
 import { graphem } from '../js/config.js';
-import { zaehle, setzeSpielstand, nochBisStern } from '../js/sterne.js';
+import { zaehle, setzeSpielstand, nochBisStern, starteRunde } from '../js/sterne.js';
 
 /** Liefert [{ name, ok, info }] */
 export function testeBildercode() {
@@ -124,6 +124,17 @@ export function testeBildercode() {
     const s = { }; setzeSpielstand(s); zaehle(s, 2, 70); zaehle(s, 5, 33);
     return gleich(dekodiere(kodiere(s.sterne)).sterne, [0, 7, 0, 0, 3]);
   })());
+
+  // --- Runde (starteRunde): neue Sterne dieser Runde still mitzählen ---
+  const zr = {}; setzeSpielstand(zr, [0, 0, 5, 0, 0]); zr.zaehler[2] = 8;
+  const r = starteRunde(zr, 3);
+  pruefe('Runde: beginnt mit 0 neuen Sternen', r.neu === 0);
+  r.zaehle(); r.zaehle();
+  pruefe('Runde: angefangener Rest aus früherer Runde zählt mit', r.neu === 1 && zr.sterne[2] === 6);
+  r.zaehle(25);
+  pruefe('Runde: höchstens bis 7 Sterne, neu = 2', r.neu === 2 && zr.sterne[2] === 7);
+  const r2 = starteRunde(zr, 1);
+  pruefe('Runde: neue Runde beginnt wieder bei 0, Rückgabe wie zaehle()', r2.neu === 0 && r2.zaehle(10) === 1 && r2.neu === 1);
 
   return ergebnisse;
 }

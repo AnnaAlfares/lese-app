@@ -23,7 +23,7 @@ export function setzeSpielstand(zustand, sterne = []) {
  * Zählt `anzahl` gelesene Einheiten für `stufe` (1–5).
  * Schreibt bei jedem vollen Zehner einen Stern in zustand.sterne[stufe - 1] (höchstens 7).
  * @returns {number} Anzahl der Sterne, die gerade dazukamen (meist 0 oder 1).
- *   Als Wahrheitswert nutzbar: if (zaehle(zustand, 3)) feiereStern();
+ *   Während der Übung still zählen (Entscheidung Anna); für die Rundenzusammenfassung starteRunde() nutzen.
  */
 export function zaehle(zustand, stufe, anzahl = 1) {
   const i = stufe - 1;
@@ -49,4 +49,24 @@ export function zaehle(zustand, stufe, anzahl = 1) {
 /** Wie viele Einheiten fehlen in dieser Stufe noch bis zum nächsten Stern (für eine Fortschrittsanzeige). */
 export function nochBisStern(zustand, stufe) {
   return EINHEITEN_JE_STERN - (zustand.zaehler?.[stufe - 1] ?? 0);
+}
+
+/**
+ * Eine Runde beginnen: zählt still mit, wie viele Sterne in dieser Runde neu dazukommen
+ * (für die Zusammenfassung am Rundenende, belohnung.js: fasseSterneZusammen).
+ *   const runde = starteRunde(zustand, 3);
+ *   runde.zaehle();          // statt zaehle(zustand, 3) – während der Übung nichts zeigen
+ *   runde.neu                // neue Sterne dieser Runde (0–7)
+ * @returns {{ neu: number, zaehle: (anzahl?: number) => number }}
+ */
+export function starteRunde(zustand, stufe) {
+  const runde = {
+    neu: 0,
+    zaehle(anzahl = 1) {
+      const dazu = zaehle(zustand, stufe, anzahl);
+      runde.neu += dazu;
+      return dazu;
+    },
+  };
+  return runde;
 }

@@ -53,6 +53,7 @@ Lehrkraft-Bereich: Buchstabenstand, Module an/aus, Hilfen an/aus, Zeitmodus an/a
 ## Arbeitsweise
 - Baue in kleinen, lauffähigen Schritten. Ein Modul pro Thread/Branch.
 - Trenne Daten (Buchstaben, Wörter) strikt von Modulen. Neue Module nutzen `config.js` und `woerter.js`, nie eigene Wortlisten.
+- CSS-Klassen eines Moduls oder Bausteins tragen ein eigenes Präfix (z. B. `blitz-`, `code-`, `belohnung`), damit sich Gestaltungsregeln nicht gegenseitig beeinflussen. Keine allgemeinen Klassennamen wie `.fertig`, `.stern` oder `.ende` in Modul-CSS. Details in `js/module/README.md`.
 - Teste jedes Modul im Browser in iPad-Größe (1180 × 820) und in Digiboard-Größe (1920 × 1080).
 - Frag nach, bevor du größere Strukturentscheidungen triffst. Erfinde keine didaktischen Regeln; wenn etwas unklar ist, frag.
 - Schlage nach jedem Schritt den nächsten sinnvollen vor.
