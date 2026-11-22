@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Testseite – Silbenteppich</title>
+  <link rel="stylesheet" href="../css/app.css">
+  <link rel="stylesheet" href="../css/belohnung.css">
+  <!-- Nur für die Entwicklung: startet js/module/silbenteppich.js direkt, ohne den Modul-Lader in app.js.
+       Einstellungen wie in der App über die Adresse, z. B. silbenteppich.html?b=12&h=bfk&z=1 -->
+  <style>
+    .testleiste { font-size: 18px; letter-spacing: 0; padding: 8px 40px; background: #f1eee8; }
+    .testleiste a { margin-right: 12px; }
+  </style>
+</head>
+<body>
+  <div class="testleiste">
+    Testseite · Stand:
+    <a href="?b=2&z=1">2 (M)</a><a href="?b=5&z=1">5 (L)</a><a href="?b=12&h=bfk&z=1">12 (U)</a>
+    <a href="?b=17&z=1">17 (Ei)</a><a href="?b=25&z=1">25 (ie)</a><a href="?b=41&z=1">41 (alle)</a>
+    · <a href="?b=12&z=0">Zeitmodus aus</a> · <a href="?b=12&h=0&z=1">ohne Hilfen</a>
+    · <span id="info"></span> · Stufe 4: <span id="sterne"></span>
+  </div>
+  <main>
+    <!-- nachgebaute Kopfzeile, wie app.js sie für Module zeichnet -->
+    <div class="kopf"><h1>Silbenteppich</h1><button id="neustart">Modul neu starten</button></div>
+    <div class="modul" id="behaelter"></div>
+  </main>
+  <script type="module">
+    import { leseEinstellungen, BUCHSTABEN } from '../js/config.js';
+    import { starte } from '../js/module/silbenteppich.js';
+    import { setzeSpielstand } from '../js/sterne.js';
+
+    const einstellungen = leseEinstellungen();
+    const zustand = {};
+    setzeSpielstand(zustand);
+    const behaelter = document.getElementById('behaelter');
+    document.getElementById('info').textContent =
+      `Stand ${einstellungen.stand} (zuletzt ${BUCHSTABEN[einstellungen.stand - 1].anzeige}), `
+      + `Zeitmodus ${einstellungen.zeitmodus ? 'an' : 'aus'}`;
+
+    let aufraeumen = starte(behaelter, { einstellungen, zustand, zurueck: () => console.log('zurück zur Stufe') });
+    document.getElementById('neustart').addEventListener('click', () => {
+      aufraeumen?.();
+      aufraeumen = starte(behaelter, { einstellungen, zustand, zurueck: () => console.log('zurück zur Stufe') });
+    });
+    // Sterne und Zähler der Stufe 4 mitlaufen lassen (nur zur Kontrolle)
+    setInterval(() => {
+      document.getElementById('sterne').textContent =
+        `${zustand.sterne[3]} Sterne, Zähler ${zustand.zaehler[3]}/10`;
+    }, 300);
+  </script>
+</body>
+</html>

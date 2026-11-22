@@ -83,6 +83,13 @@ export const ANSAGEN = Object.freeze({
   'noch-einmal': 'Versuch es noch einmal.',
   // Leseapparat
   'leseapparat-anleitung': 'Wisch einen Streifen weiter und hör zu. Dann fahr mit dem Finger den Bogen entlang und lies selbst.',
+  // Silbenteppich (allgemein nutzbar für Tempoübungen)
+  'ohne-zeit': 'Ohne Zeit',
+  'eine-minute': 'Eine Minute',
+  'zeit-stoppen': 'Zeit stoppen',
+  'zeit-um': 'Die Zeit ist um.',
+  'noch-einmal-lesen': 'Noch einmal lesen',
+  'neuer-teppich': 'Neuer Teppich',
 });
 
 /** Ansage-id eines Modulnamens, z. B. 'Wo hörst du es?' → 'modul-wo-hoerst-du-es'. */
