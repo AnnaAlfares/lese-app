@@ -20,15 +20,15 @@ import { graphem } from '../config.js';
 import { lesbareSilben, lesbareWoerter, zerlege, waehle } from '../woerter.js';
 import { sprichSilbe, sprichWort, sprichAnsage, stoppe } from '../audio.js';
 import { ladeLaut, halteLaut, weckeAudio } from '../haltelaut.js';
-import { zaehle } from '../sterne.js';
-import { lobe, feiereStern } from '../belohnung.js';
-import { MAX_STERNE } from '../bildercode.js';
+import { starteRunde as starteSterneRunde } from '../sterne.js';
+import { lobe, fasseSterneZusammen } from '../belohnung.js';
 
 const STUFE = 3; // Rutschen gehört zu Stufe 3 (Laute verbinden): zählt für deren Sterne
 
-// LOB (Entscheidung Anna): zur Motivation einmal mittendrin, wenn die Hälfte der Runde geschafft ist,
-// und am Rundenende. Fällt die Hälfte mit einem neuen Stern zusammen, wird nur der Stern gefeiert.
-// Das Lob kommt erst, nachdem die Silbe bzw. das Wort fertig vorgesprochen ist.
+// STERNE (Entscheidung Anna): während der Übung still zählen (starteRunde aus sterne.js),
+// am Rundenende ruhig zusammenfassen (fasseSterneZusammen; bei 0 neuen Sternen lobt die Funktion selbst).
+// LOB zur Halbzeit: einmal mittendrin, nachdem die Silbe bzw. das Wort fertig vorgesprochen ist.
+// Entscheidung Anna: bleibt an (nicht aufdringlich); false schaltet es ab.
 const LOB_ZUR_HAELFTE = true;
 const LOB_AB_AUFGABEN = 4; // in sehr kurzen Runden (z. B. nur „Mama“ bei Stand 4) kein Lob mittendrin
 
@@ -91,25 +91,25 @@ const svgRutsche = (silbe, farbe) => {
   if (!v) {
     // Vokal-Rutsche: oben der Vokal, die ganze Bahn lang klingt nur er; unten eine leere Landestelle
     return `
-  <svg viewBox="0 0 ${BREITE} ${HOEHE}" class="rutsche-bild nur-vokal" style="--farbe:${farbe}">
-    <circle class="leuchte leuchte-k" cx="80" cy="78" r="66"/>
-    <path class="bahn-grund" d="${BAHN}"/>
-    <path class="bahn-weg" d="${BAHN}"/>
-    ${HALTESPUR.map(([x, y]) => `<text class="haltespur" x="${x}" y="${y}">${k.text.toLowerCase()}</text>`).join('')}
-    <ellipse class="landung" cx="280" cy="400" rx="70" ry="22"/>
-    <text class="laut laut-k" x="80" y="112">${k.text}</text>
-    <circle class="kugel" cx="80" cy="150" r="34"/>
+  <svg viewBox="0 0 ${BREITE} ${HOEHE}" class="rutsch-bild rutsch-nur-vokal" style="--farbe:${farbe}">
+    <circle class="rutsch-leuchte rutsch-leuchte-k" cx="80" cy="78" r="66"/>
+    <path class="rutsch-bahn-grund" d="${BAHN}"/>
+    <path class="rutsch-bahn-weg" d="${BAHN}"/>
+    ${HALTESPUR.map(([x, y]) => `<text class="rutsch-haltespur" x="${x}" y="${y}">${k.text.toLowerCase()}</text>`).join('')}
+    <ellipse class="rutsch-landung" cx="280" cy="400" rx="70" ry="22"/>
+    <text class="rutsch-laut rutsch-laut-k" x="80" y="112">${k.text}</text>
+    <circle class="rutsch-kugel" cx="80" cy="150" r="34"/>
   </svg>`;
   }
   return `
-  <svg viewBox="0 0 ${BREITE} ${HOEHE}" class="rutsche-bild" style="--farbe:${farbe}">
-    <circle class="leuchte leuchte-k" cx="80" cy="78" r="66"/>
-    <circle class="leuchte leuchte-v" cx="280" cy="408" r="66"/>
-    <path class="bahn-grund" d="${BAHN}"/>
-    <path class="bahn-weg" d="${BAHN}"/>
-    <text class="laut laut-k" x="80" y="112">${k.text}</text>
-    <text class="laut laut-v" x="280" y="442">${v.text}</text>
-    <circle class="kugel" cx="80" cy="150" r="34"/>
+  <svg viewBox="0 0 ${BREITE} ${HOEHE}" class="rutsch-bild" style="--farbe:${farbe}">
+    <circle class="rutsch-leuchte rutsch-leuchte-k" cx="80" cy="78" r="66"/>
+    <circle class="rutsch-leuchte rutsch-leuchte-v" cx="280" cy="405" r="62"/>
+    <path class="rutsch-bahn-grund" d="${BAHN}"/>
+    <path class="rutsch-bahn-weg" d="${BAHN}"/>
+    <text class="rutsch-laut rutsch-laut-k" x="80" y="112">${k.text}</text>
+    <text class="rutsch-laut rutsch-laut-v" x="280" y="442">${v.text}</text>
+    <circle class="rutsch-kugel" cx="80" cy="150" r="34"/>
   </svg>`;
 };
 
@@ -122,15 +122,14 @@ const LAUTSPRECHER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
   <path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>`;
 const FERTIG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
   stroke-linecap="round" stroke-linejoin="round"><path d="M4 13 L10 19 L20 6"/></svg>`;
-const STERN = `<svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2 6.1 20.4l1.3-6.5L2.5 9.3l6.6-.8z"/></svg>`;
 
 /** Kleines Symbol: eine bzw. zwei Rutschen (für die Auswahl Silben/Wörter). */
 const symbol = (anzahl, text) => `
-  <svg viewBox="0 0 ${anzahl * 120} 130" class="symbol">
+  <svg viewBox="0 0 ${anzahl * 120} 130" class="rutsch-symbol">
     ${Array.from({ length: anzahl }, (_, i) => `
       <path d="M ${i * 120 + 25} 30 C ${i * 120 + 25} 80, ${i * 120 + 95} 60, ${i * 120 + 95} 105"
         fill="none" stroke="${i % 2 ? 'var(--silbe-rot)' : 'var(--silbe-blau)'}" stroke-width="16" stroke-linecap="round"/>`).join('')}
-  </svg><span class="symbol-text">${text}</span>`;
+  </svg><span class="rutsch-symbol-text">${text}</span>`;
 
 // ---------------------------------------------------------------------------
 // Modul
@@ -160,14 +159,14 @@ export function starte(wurzel, { einstellungen, zustand, zurueck } = {}) {
   function zeigeAuswahl() {
     aufraeumen();
     wurzel.innerHTML = `
-      <div class="rutschen">
+      <div class="rutsch-modul">
         <div class="kacheln">
-          <button class="kachel rutschen-teil" data-teil="silben"
+          <button class="kachel rutsch-teil" data-teil="silben"
             ${vorrat.silben.length ? '' : 'disabled'}>${symbol(1, 'ma')}</button>
-          <button class="kachel rutschen-teil" data-teil="woerter"
+          <button class="kachel rutsch-teil" data-teil="woerter"
             ${vorrat.woerter.length ? '' : 'disabled'}>${symbol(2, 'Ma-ma')}</button>
         </div>
-        ${vorrat.silben.length ? '' : `<p class="rutschen-hinweis">Für dieses Spiel braucht es mindestens einen
+        ${vorrat.silben.length ? '' : `<p class="rutsch-hinweis">Für dieses Spiel braucht es mindestens einen
           dehnbaren Konsonanten (z. B. M) und einen Vokal. Buchstabenstand im Lehrkraft-Bereich erhöhen.</p>`}
       </div>`;
     for (const k of wurzel.querySelectorAll('[data-teil]')) {
@@ -181,6 +180,7 @@ export function starte(wurzel, { einstellungen, zustand, zurueck } = {}) {
     // Laute der ganzen Runde vorab laden, damit der Ton sofort beim Rutschen kommt
     for (const a of aufgaben) for (const s of a.silben) for (const g of s.grapheme) ladeLaut(g.id);
     let nr = 0;
+    const sterneRunde = zustand ? starteSterneRunde(zustand, STUFE) : null; // zählt still mit
     if (!anleitungGehoert) { anleitungGehoert = true; sprichAnsage('rutschen-anleitung'); }
     zeigeAufgabe();
 
@@ -189,31 +189,31 @@ export function starte(wurzel, { einstellungen, zustand, zurueck } = {}) {
       const aufgabe = aufgaben[nr];
       const n = aufgabe.silben.length;
       // Fortschritt der Runde als Punkte (keine Sterne – Sterne gibt es nur für die Stufe, siehe sterne.js)
-      const punkte = aufgaben.map((_, i) => `<span class="punkt${i < nr ? ' voll' : ''}"></span>`).join('');
+      const punkte = aufgaben.map((_, i) => `<span class="rutsch-punkt${i < nr ? ' rutsch-voll' : ''}"></span>`).join('');
       wurzel.innerHTML = `
-        <div class="rutschen" style="--anzahl:${n}">
-          <div class="rutschen-leiste"><div class="punkte">${punkte}</div></div>
-          <div class="bahnen">
-            ${aufgabe.silben.map((s, i) => `<div class="rutsche${i === 0 ? ' dran' : ''}">${svgRutsche(s, farbe(i))}</div>`).join('')}
+        <div class="rutsch-modul" style="--anzahl:${n}">
+          <div class="rutsch-leiste"><div class="rutsch-punkte">${punkte}</div></div>
+          <div class="rutsch-bahnen">
+            ${aufgabe.silben.map((s, i) => `<div class="rutsch-feld${i === 0 ? ' rutsch-dran' : ''}">${svgRutsche(s, farbe(i))}</div>`).join('')}
           </div>
-          <div class="ergebnis">
-            <button class="nochmal" aria-label="Noch einmal rutschen">${NOCHMAL}</button>
-            <div class="lesewort${hilfen.boegen ? ' mit-boegen' : ''}">
-              ${aufgabe.silben.map((s, i) => `<span class="silbe" style="color:${farbe(i)}">${s.text}</span>`).join('')}
+          <div class="rutsch-ergebnis">
+            <button class="rutsch-nochmal" aria-label="Noch einmal rutschen">${NOCHMAL}</button>
+            <div class="rutsch-lesewort${hilfen.boegen ? ' rutsch-mit-boegen' : ''}">
+              ${aufgabe.silben.map((s, i) => `<span class="rutsch-silbe" style="color:${farbe(i)}">${s.text}</span>`).join('')}
             </div>
-            <button class="lautsprecher vorlesen" aria-label="Vorlesen"
+            <button class="lautsprecher rutsch-vorlesen" aria-label="Vorlesen"
               ${n === 1 ? `data-sprich-silbe="${aufgabe.text}"` : `data-sprich-wort="${aufgabe.text}"`}>${LAUTSPRECHER}</button>
-            <button class="weiter" aria-label="Weiter">${PFEIL_WEITER}</button>
+            <button class="rutsch-weiter" aria-label="Weiter">${PFEIL_WEITER}</button>
           </div>
         </div>`;
-      const el = wurzel.querySelector('.rutschen');
-      el.querySelector('.nochmal').onclick = () => zeigeAufgabe();
-      el.querySelector('.weiter').onclick = () => {
+      const el = wurzel.querySelector('.rutsch-modul');
+      el.querySelector('.rutsch-nochmal').onclick = () => zeigeAufgabe();
+      el.querySelector('.rutsch-weiter').onclick = () => {
         nr += 1;
         if (nr < aufgaben.length) zeigeAufgabe(); else zeigeEnde();
       };
 
-      const rutschen = [...el.querySelectorAll('.rutsche')];
+      const rutschen = [...el.querySelectorAll('.rutsch-feld')];
       const steuerungen = rutschen.map((r, i) => macheRutschbar(r, aufgabe.silben[i], () => fertig(i)));
       aufraeumen = () => steuerungen.forEach(s => s.abbrechen());
 
@@ -221,19 +221,19 @@ export function starte(wurzel, { einstellungen, zustand, zurueck } = {}) {
       const nochAktuell = () => !beendet && el.isConnected;
 
       async function fertig(i) {
-        rutschen[i].classList.replace('dran', 'gerutscht');
+        rutschen[i].classList.replace('rutsch-dran', 'rutsch-gerutscht');
         await sprichSilbe(aufgabe.silben[i].text);
         if (!nochAktuell()) return;
-        if (i + 1 < n) { rutschen[i + 1].classList.add('dran'); return; }
+        if (i + 1 < n) { rutschen[i + 1].classList.add('rutsch-dran'); return; }
         if (n > 1) await sprichWort(aufgabe.text);
         if (!nochAktuell()) return;
         // Jetzt liest das Kind selbst: Silbe/Wort groß zeigen, dann „weiter“
-        el.classList.add('geschafft');
-        // STERNE: Eine Einheit ist gelesen (Silbe bzw. Wort, selbst gerutscht) → zentraler Zähler
+        el.classList.add('rutsch-geschafft');
+        // STERNE: Eine Einheit ist gelesen (Silbe bzw. Wort, selbst gerutscht) → still zählen
+        sterneRunde?.zaehle();
         const haelfte = LOB_ZUR_HAELFTE && aufgaben.length >= LOB_AB_AUFGABEN
           && nr + 1 === Math.ceil(aufgaben.length / 2);
-        if (zustand && zaehle(zustand, STUFE)) feiereStern(wurzel);
-        else if (haelfte) lobe(wurzel);          // LOB mittendrin
+        if (haelfte) lobe(wurzel);               // LOB zur Halbzeit
         else if (nr === 0) sprichAnsage('rutschen-jetzt-du');
       }
     }
@@ -241,22 +241,21 @@ export function starte(wurzel, { einstellungen, zustand, zurueck } = {}) {
     function zeigeEnde() {
       aufraeumen();
       wurzel.innerHTML = `
-        <div class="rutschen">
-          <div class="ende">
-            ${zustand?.sterne ? `<div class="sterne gross" aria-label="Sterne in Stufe ${STUFE}">${
-              Array.from({ length: MAX_STERNE }, (_, i) =>
-                `<span class="stern${i < zustand.sterne[STUFE - 1] ? ' voll' : ''}">${STERN}</span>`).join('')}</div>` : ''}
-            <div class="zeile-knoepfe">
-              <button class="nochmal-runde" aria-label="Noch eine Runde">${NOCHMAL}</button>
-              <button class="zur-auswahl" aria-label="Silben oder Wörter wählen">${symbol(1, '')}${symbol(2, '')}</button>
-              ${zurueck ? `<button class="fertig-knopf" aria-label="Fertig">${FERTIG}</button>` : ''}
+        <div class="rutsch-modul">
+          <div class="rutsch-ende">
+            <div class="rutsch-ende-sterne"></div>
+            <div class="rutsch-knoepfe">
+              <button class="rutsch-nochmal-runde" aria-label="Noch eine Runde">${NOCHMAL}</button>
+              <button class="rutsch-zur-auswahl" aria-label="Silben oder Wörter wählen">${symbol(1, '')}${symbol(2, '')}</button>
+              ${zurueck ? `<button class="rutsch-fertig" aria-label="Fertig">${FERTIG}</button>` : ''}
             </div>
           </div>
         </div>`;
-      lobe(wurzel); // LOB am Rundenende
-      wurzel.querySelector('.nochmal-runde').onclick = () => starteRunde(teil);
-      wurzel.querySelector('.zur-auswahl').onclick = zeigeAuswahl;
-      wurzel.querySelector('.fertig-knopf')?.addEventListener('click', () => { schliessen(); zurueck(); });
+      // Rundenende: neue Sterne ruhig zusammenfassen (0 neue → die Funktion lobt selbst)
+      fasseSterneZusammen(wurzel.querySelector('.rutsch-ende-sterne'), sterneRunde?.neu ?? 0);
+      wurzel.querySelector('.rutsch-nochmal-runde').onclick = () => starteRunde(teil);
+      wurzel.querySelector('.rutsch-zur-auswahl').onclick = zeigeAuswahl;
+      wurzel.querySelector('.rutsch-fertig')?.addEventListener('click', () => { schliessen(); zurueck(); });
     }
   }
 
@@ -275,8 +274,8 @@ export function starte(wurzel, { einstellungen, zustand, zurueck } = {}) {
 // ---------------------------------------------------------------------------
 function macheRutschbar(rutsche, silbe, beiFertig) {
   const svg = rutsche.querySelector('svg');
-  const weg = svg.querySelector('.bahn-weg');
-  const kugel = svg.querySelector('.kugel');
+  const weg = svg.querySelector('.rutsch-bahn-weg');
+  const kugel = svg.querySelector('.rutsch-kugel');
   const laenge = weg.getTotalLength();
   const punkte = Array.from({ length: PROBEN + 1 }, (_, i) => weg.getPointAtLength(laenge * i / PROBEN));
   // oben: Konsonant (bzw. Vokal bei der Vokal-Rutsche), unten: Vokal (bzw. nichts)
@@ -302,8 +301,8 @@ function macheRutschbar(rutsche, silbe, beiFertig) {
     if (klang?.id === id) return;
     klang?.halt.stop();
     klang = id ? { id, halt: halteLaut(id, { schleife: !ZWIELAUTE.has(id) }) } : null;
-    svg.classList.toggle('klingt-k', id !== null && id === oben);
-    svg.classList.toggle('klingt-v', id !== null && id === unten);
+    svg.classList.toggle('rutsch-klingt-k', id !== null && id === oben);
+    svg.classList.toggle('rutsch-klingt-v', id !== null && id === unten);
   }
 
   const imSvg = e => {
@@ -325,12 +324,12 @@ function macheRutschbar(rutsche, silbe, beiFertig) {
   }
 
   function los(e) {
-    if (fertig || finger !== null || !rutsche.classList.contains('dran')) return;
+    if (fertig || finger !== null || !rutsche.classList.contains('rutsch-dran')) return;
     weckeAudio();
     if (!rutsche_zu(e)) return;
     finger = e.pointerId;
     svg.setPointerCapture(e.pointerId);
-    svg.classList.add('aktiv');
+    svg.classList.add('rutsch-aktiv');
     zeichne();
     // noch kein Ton: er kommt erst, wenn der Finger wirklich rutscht
   }
@@ -340,7 +339,7 @@ function macheRutschbar(rutsche, silbe, beiFertig) {
     rutsche_zu(e);
     if (anteil === vorher) return; // Finger bewegt sich nicht vorwärts → zählt als Stillhalten
     zeichne();
-    if (anteil >= 0.97) { anteil = 1; zeichne(); ende(); fertig = true; svg.classList.add('gerutscht'); beiFertig(); return; }
+    if (anteil >= 0.97) { anteil = 1; zeichne(); ende(); fertig = true; svg.classList.add('rutsch-gerutscht'); beiFertig(); return; }
     klinge(lautHier());
     clearTimeout(stillZeit);
     stillZeit = setTimeout(() => klinge(null), STILL_MS);
@@ -349,7 +348,7 @@ function macheRutschbar(rutsche, silbe, beiFertig) {
     if (e && e.pointerId !== finger) return;
     finger = null;
     clearTimeout(stillZeit);
-    svg.classList.remove('aktiv');
+    svg.classList.remove('rutsch-aktiv');
     klinge(null);
   }
 
