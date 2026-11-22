@@ -2,7 +2,14 @@
 // und die Funktionen, die zu einem Buchstabenstand alles Lesbare liefern.
 // Module holen ihre Wörter nur von hier, nie aus eigenen Listen.
 
-import { BUCHSTABEN, GEWICHT_NEUER_BUCHSTABE, position } from './config.js';
+import { BUCHSTABEN, GEWICHT_NEUER_BUCHSTABE, NICHT_BASISGRAPHEME, VOKALE_NACH_QU, graphem, position,
+  leseEinstellungen } from './config.js';
+
+// Optionen für alle Abfragen unten (letzter, optionaler Parameter):
+//   { ieErlaubt }  Wörter und Silben mit ie erlauben (Lehrkraft-Schalter, URL-Parameter ie=1).
+// Ohne Angabe gilt die Einstellung aus der Adresse der Seite – Module brauchen nichts weiterzureichen.
+const STANDARD_OPTIONEN = Object.freeze({ ieErlaubt: leseEinstellungen().ieErlaubt });
+const mitStandard = optionen => ({ ...STANDARD_OPTIONEN, ...optionen });
 
 // ---------------------------------------------------------------------------
 // Wortliste
@@ -22,7 +29,12 @@ const WORTLISTE = [
   // lesbar ab A (O M E A)
   ['Ma-ma', 'nomen', true],
   ['O-ma', 'nomen', true],
-  ['am', 'wort', false],
+  ['am', 'wort', false],      // Sichtwort
+  // Sichtwörter: hier stehen sie, sobald sie erlesbar sind (ist, mit ab I; sind ab D).
+  // Vorher erscheinen sie nur als Ganzwort über sichtwoerter() (siehe FRUEHE_SICHTWOERTER).
+  ['ist', 'wort', false],
+  ['mit', 'wort', false],
+  ['sind', 'wort', false],
   // ab L
   ['La-ma', 'nomen', true],
   ['Lo-la', 'name', false],
@@ -140,10 +152,26 @@ const WORTLISTE = [
   ['Ba-na-ne', 'nomen', true],
   ['Stein', 'nomen', true],
   ['Jo-jo', 'nomen', true],
+
+  // Wörter mit ie: nur wenn die Lehrkraft „Wörter mit ie erlauben“ einschaltet (ab Stand 25)
+  ['sie', 'wort', false],
+  ['wie', 'wort', false],
+  ['die', 'wort', false],
+  ['Bie-ne', 'nomen', true],
+  ['Rie-se', 'nomen', true],
+  ['Wie-se', 'nomen', true],
+  ['Zie-ge', 'nomen', true],
+  ['sie-ben', 'zahl', true],
 ];
 
-// Sichtwörter (CLAUDE.md, Regel 3): werden als Ganzes gelernt.
-export const SICHTWOERTER = Object.freeze(['ich', 'du', 'und', 'ist', 'das', 'mit', 'auf', 'ein']);
+// Sichtwörter (CLAUDE.md, Regel 3, ergänzt um „am“ und „sind“): werden als Ganzes gelernt.
+export const SICHTWOERTER = Object.freeze(['ich', 'du', 'und', 'ist', 'das', 'mit', 'auf', 'ein', 'am', 'sind']);
+
+// Früh gezeigte Sichtwörter: erscheinen ab diesem Buchstabenstand in den Übungen als Ganzwort,
+// auch wenn noch nicht alle ihre Buchstaben eingeführt sind (z. B. „sind“ vor dem D).
+// Alle übrigen Sichtwörter erscheinen erst, wenn sie erlesbar sind.
+// VORSCHLAG Stand 4 (O M E A): ab da gibt es die ersten Wörter (Mama, Oma, am). Entscheidung: Anna.
+export const FRUEHE_SICHTWOERTER = Object.freeze({ am: 4, ist: 4, mit: 4, sind: 4 });
 
 // Wörternetze (Analogielesen): gleiches Wortende, anderer Anfang.
 // Das Modellwort ist das erste Wort; es wird zuerst sicher gelesen, die anderen per Analogie.
@@ -204,6 +232,32 @@ export function zerlege(silbenText) {
   return ergebnis;
 }
 
+// ---------------------------------------------------------------------------
+// Aussortieren: nicht lauttreue Silben und Wörter
+// ---------------------------------------------------------------------------
+// Eine Silbe oder ein Wort wird NIE angeboten (bei keinem Buchstabenstand), wenn
+//   1. ein Nicht-Basisgraphem darin vorkommt (v, c, y, ß, ie – siehe NICHT_BASISGRAPHEME in config.js),
+//      weil sich seine Schreibung nicht aus dem Laut ableiten lässt (NRW-Handreichung S. 70, 98).
+//      Ausnahme ie: erlaubt, wenn die Lehrkraft „Wörter mit ie erlauben“ einschaltet (ieErlaubt) –
+//      dann ab dem Buchstaben ie (Stand 25) wie jedes andere Graphem. Oder
+//   2. „qu“ vor einem Vokal steht, vor dem es im Deutschen nicht vorkommt (quu, queu, quau, quei, quö, qü),
+//      siehe VOKALE_NACH_QU in config.js.
+// Was aussortiert wurde, zeigt test/woerter.html (Funktion aussortiert()).
+
+/** Grund, warum eine Graphemfolge aussortiert wird, oder null, wenn sie lauttreu ist. */
+export function aussortierGrund(grapheme, optionen) {
+  const { ieErlaubt } = mitStandard(optionen);
+  const fremd = grapheme.find(gr => NICHT_BASISGRAPHEME.has(gr.id) && !(ieErlaubt && gr.id === 'ie'));
+  if (fremd) return `kein Basisgraphem: ${fremd.id}`;
+  for (let i = 0; i < grapheme.length - 1; i++) {
+    const naechstes = grapheme[i + 1].id;
+    if (grapheme[i].id === 'qu' && graphem(naechstes)?.typ === 'vokal' && !VOKALE_NACH_QU.has(naechstes)) {
+      return `qu vor ${naechstes}`;
+    }
+  }
+  return null;
+}
+
 /** Buchstabenstand, ab dem eine Graphemfolge lesbar ist (Infinity = nie, unbekanntes Zeichen). */
 function lesbarAb(grapheme) {
   return Math.max(...grapheme.map(gr => position(gr.id)));
@@ -212,14 +266,23 @@ function lesbarAb(grapheme) {
 // Wortliste einmal aufbereiten
 const WOERTER = WORTLISTE.map(([silbenText, art, bild], rang) => {
   const grapheme = zerlege(silbenText);
+  const grund = aussortierGrund(grapheme);
   return Object.freeze({
     wort: silbenText.replaceAll('-', ''),
     silben: silbenText.split('-'),
     art, bild, rang, grapheme,
-    ab: lesbarAb(grapheme),
+    ab: grund ? Infinity : lesbarAb(grapheme), // mit Standard-Optionen; aussortiert = nie lesbar
+    erlesbarAb: lesbarAb(grapheme),
+    aussortiert: grund,
   });
 });
 const NACH_WORT = new Map(WOERTER.map(w => [w.wort, w]));
+
+/** Wort-Objekt mit ab/aussortiert für bestimmte Optionen (ieErlaubt). */
+function mitOptionen(w, optionen) {
+  const grund = aussortierGrund(w.grapheme, optionen);
+  return { ...w, aussortiert: grund, ab: grund ? Infinity : w.erlesbarAb };
+}
 
 /** Wort-Objekt zu einem Wort (z. B. 'Rose') oder undefined. */
 export function wortInfo(wort) {
@@ -239,8 +302,8 @@ export function neuestesGraphem(stand) {
  * Alle lesbaren Wörter bei einem Buchstabenstand.
  * Wörter mit dem zuletzt eingeführten Buchstaben stehen vorne und haben neu = true.
  */
-export function lesbareWoerter(stand) {
-  return WOERTER.filter(w => w.ab <= stand)
+export function lesbareWoerter(stand, optionen) {
+  return WOERTER.map(w => mitOptionen(w, optionen)).filter(w => w.ab <= stand)
     .map(w => ({ ...w, neu: w.ab === stand }))
     .sort((a, b) => (b.neu - a.neu) || (a.rang - b.rang));
 }
@@ -251,47 +314,89 @@ export function lesbareWoerter(stand) {
  * - dazu jede Silbe aus den lesbaren Wörtern (sen, fant, Ast …)
  * Silben mit dem neuesten Buchstaben stehen vorne (neu = true).
  */
-export function lesbareSilben(stand) {
-  const eingefuehrt = BUCHSTABEN.slice(0, stand);
-  const konsonanten = eingefuehrt.filter(b => b.typ !== 'vokal' && b.anfang);
-  const vokale = eingefuehrt.filter(b => b.typ === 'vokal');
+export function lesbareSilben(stand, optionen) {
   const silben = new Map();
 
-  for (const k of konsonanten) {
-    for (const v of vokale) {
-      const text = k.id + v.id;
-      silben.set(text, { text, grapheme: [{ id: k.id, text: k.id }, { id: v.id, text: v.id }],
-        art: 'offen', ab: Math.max(position(k.id), position(v.id)) });
-    }
-  }
-  for (const w of WOERTER) {
-    if (w.ab > stand) continue;
-    for (const s of w.silben) {
-      const text = s.toLowerCase();
-      if (silben.has(text)) continue;
-      const grapheme = zerlege(text);
-      silben.set(text, { text, grapheme, art: 'wort', ab: lesbarAb(grapheme) });
-    }
+  for (const s of alleSilben(stand, optionen)) {
+    if (!s.aussortiert) silben.set(s.text, s);
   }
   return [...silben.values()]
     .map(s => ({ ...s, neu: s.ab === stand }))
     .sort((a, b) => (b.neu - a.neu) || (a.art === b.art ? 0 : a.art === 'offen' ? -1 : 1));
 }
 
-/** Sichtwörter mit der Angabe, ob sie mit den eingeführten Buchstaben schon erlesbar wären. */
-export function sichtwoerter(stand) {
+/**
+ * Alle Silbenkandidaten bei einem Stand – auch aussortierte (Feld aussortiert = Grund oder null):
+ * offene Silben Konsonant + Vokal aus den eingeführten Graphemen und die Silben der lesbaren Wörter.
+ */
+function alleSilben(stand, optionen) {
+  const eingefuehrt = BUCHSTABEN.slice(0, stand);
+  const konsonanten = eingefuehrt.filter(b => b.typ !== 'vokal' && b.anfang);
+  const vokale = eingefuehrt.filter(b => b.typ === 'vokal');
+  const silben = new Map();
+  for (const k of konsonanten) {
+    for (const v of vokale) {
+      const text = k.id + v.id;
+      const grapheme = [{ id: k.id, text: k.id }, { id: v.id, text: v.id }];
+      silben.set(text, { text, grapheme, art: 'offen', ab: Math.max(position(k.id), position(v.id)),
+        aussortiert: aussortierGrund(grapheme, optionen) });
+    }
+  }
+  for (const w of WOERTER.map(x => mitOptionen(x, optionen))) {
+    if (w.ab > stand) continue;
+    for (const s of w.silben) {
+      const text = s.toLowerCase();
+      if (silben.has(text)) continue;
+      const grapheme = zerlege(text);
+      silben.set(text, { text, grapheme, art: 'wort', ab: lesbarAb(grapheme),
+        aussortiert: aussortierGrund(grapheme, optionen) });
+    }
+  }
+  return [...silben.values()];
+}
+
+/**
+ * Was bei diesem Stand aussortiert wird, obwohl alle Buchstaben eingeführt sind (für die Testseite).
+ * @returns {{silben: {text, aussortiert}[], woerter: {wort, aussortiert}[]}}
+ */
+export function aussortiert(stand, optionen) {
+  return {
+    silben: alleSilben(stand, optionen).filter(s => s.aussortiert),
+    woerter: WOERTER.map(w => mitOptionen(w, optionen)).filter(w => w.aussortiert && w.erlesbarAb <= stand),
+  };
+}
+
+/**
+ * Sichtwörter bei einem Buchstabenstand.
+ *   ab          Stand, ab dem das Wort in Übungen erscheint (früh gezeigt oder sobald erlesbar)
+ *   lesbar      darf bei diesem Stand gezeigt werden (ab <= stand)
+ *   erlesbarAb  Stand, ab dem alle Buchstaben eingeführt sind
+ *   erlesbar    alle Buchstaben eingeführt – das Wort kann auch Laut für Laut erlesen werden
+ *   ganzwort    wird gezeigt, ist aber noch nicht erlesbar: nur als Ganzwort verwenden
+ *               (nicht in Übungen, die Laut für Laut zusammenschleifen)
+ * Hinweis: lesbareWoerter() enthält nur erlesbare Wörter, also nie ein Ganzwort.
+ */
+export function sichtwoerter(stand, optionen) {
   return SICHTWOERTER.map(wort => {
     const grapheme = zerlege(wort);
-    return { wort, grapheme, ab: lesbarAb(grapheme), lesbar: lesbarAb(grapheme) <= stand };
+    const erlesbarAb = aussortierGrund(grapheme, optionen) ? Infinity : lesbarAb(grapheme);
+    const ab = Math.min(erlesbarAb, FRUEHE_SICHTWOERTER[wort] ?? Infinity);
+    return {
+      wort, grapheme, ab, erlesbarAb,
+      lesbar: ab <= stand,
+      erlesbar: erlesbarAb <= stand,
+      ganzwort: ab <= stand && erlesbarAb > stand,
+    };
   });
 }
 
 /** Wörternetze, von denen bei diesem Stand mindestens zwei Wörter lesbar sind. */
-export function lesbareNetze(stand) {
+export function lesbareNetze(stand, optionen) {
+  const ab = w => (NACH_WORT.has(w) ? mitOptionen(NACH_WORT.get(w), optionen).ab : sichtAb(w));
   return NETZE.map(n => ({
     endung: n.endung,
     modellwort: n.woerter[0],
-    woerter: n.woerter.filter(w => (wortInfo(w)?.ab ?? sichtAb(w)) <= stand),
+    woerter: n.woerter.filter(w => ab(w) <= stand),
   })).filter(n => n.woerter.length >= 2);
 }
 const sichtAb = wort => lesbarAb(zerlege(wort));
@@ -313,15 +418,15 @@ export function waehle(liste, anzahl, gewicht = GEWICHT_NEUER_BUCHSTABE) {
 }
 
 /** Alles auf einmal für einen Buchstabenstand – Einstieg für die Module. */
-export function lesestoff(stand) {
+export function lesestoff(stand, optionen) {
   return {
     stand,
     neu: neuestesGraphem(stand),
     buchstaben: BUCHSTABEN.slice(0, stand),
-    woerter: lesbareWoerter(stand),
-    silben: lesbareSilben(stand),
-    sichtwoerter: sichtwoerter(stand),
-    netze: lesbareNetze(stand),
+    woerter: lesbareWoerter(stand, optionen),
+    silben: lesbareSilben(stand, optionen),
+    sichtwoerter: sichtwoerter(stand, optionen),
+    netze: lesbareNetze(stand, optionen),
   };
 }
 
@@ -345,7 +450,9 @@ export function pruefeWortliste() {
   for (const w of WOERTER) {
     if (gesehen.has(w.wort)) hinweise.push({ wort: w.wort, text: 'doppelt in der Liste' });
     gesehen.add(w.wort);
-    if (w.ab === Infinity) hinweise.push({ wort: w.wort, text: 'enthält ein unbekanntes Zeichen' });
+    if (w.erlesbarAb === Infinity) hinweise.push({ wort: w.wort, text: 'enthält ein unbekanntes Zeichen' });
+    const grund = aussortierGrund(w.grapheme, { ieErlaubt: true }); // ie ist umschaltbar, kein Fehler
+    if (grund) hinweise.push({ wort: w.wort, text: `aussortiert (${grund}) – erscheint nie` });
     for (const [muster, text] of VERDAECHTIG) {
       if (muster.test(w.wort)) hinweise.push({ wort: w.wort, text });
     }

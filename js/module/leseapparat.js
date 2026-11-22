@@ -20,8 +20,14 @@
 
 import { BUCHSTABEN, GEWICHT_NEUER_BUCHSTABE } from '../config.js';
 import { sprichLaut, sprichSilbe, stoppe } from '../audio.js';
+import { zaehle, nochBisStern, EINHEITEN_JE_STERN } from '../sterne.js';
+import { lobe, feiereStern } from '../belohnung.js';
 
-const SILBEN_JE_STERN = 10;
+const STUFE = 3; // Leseapparat gehört zu Stufe 3 „Laute verbinden“
+
+// VORLÄUFIG (Entscheidung zur Lob-Häufigkeit steht aus): gelobt wird am Rundenende,
+// eine Runde = so viele selbst gelesene Silben. Zum Ändern nur hier und in rundenEnde() anpassen.
+const SILBEN_JE_RUNDE = 10;
 
 // Geometrie des Bogens (SVG-Koordinaten, viewBox 0 0 1000 200).
 // Die Fenstermitten liegen bei 17 % und 83 % der Breite (siehe css/leseapparat.css).
@@ -124,13 +130,6 @@ const grossAnfang = text => text[0].toUpperCase() + text.slice(1);
 // ---------------------------------------------------------------------------
 // Modul
 // ---------------------------------------------------------------------------
-// VORLÄUFIG: Die Sterne-Regel ist noch nicht entschieden. Das Modul zählt selbst gelesene Silben
-// und zeigt eigene Sterne an (SILBEN_JE_STERN Silben = 1 Stern), verändert zustand.sterne aber nicht.
-// Sobald die Regel feststeht, wird hier eingetragen, was mit dem Spielstand passiert.
-function sternVerdient(zustand) { // eslint-disable-line no-unused-vars
-  // z. B. später: zustand.sterne[2] = Math.min(7, zustand.sterne[2] + 1);  (Stufe 3)
-}
-
 export function starte(behaelter, { einstellungen, zustand } = {}) {
   ladeCss();
   // einstellungen.plosive: Schalter der Lehrkraft (URL-Parameter p=1); fehlt er, nur Dehnlaute
@@ -203,8 +202,7 @@ export function starte(behaelter, { einstellungen, zustand } = {}) {
     t: 0,               // Position des Punkts auf dem Bogen (0 … 1)
     vorgemacht: false,  // wurde die aktuelle Silbe schon vorgesprochen/gezeigt?
     gezaehlt: false,    // hat das Kind die aktuelle Silbe schon selbst gelesen?
-    gelesen: 0,         // selbst gelesene Silben seit dem letzten Stern
-    sterne: 0,
+    runde: 0,           // selbst gelesene Silben in der laufenden Runde (für das Lob)
     token: 0,           // zum Abbrechen laufender Abläufe
     rahmen: 0,          // requestAnimationFrame-Nummer
     zeitgeber: 0,
@@ -256,11 +254,14 @@ export function starte(behaelter, { einstellungen, zustand } = {}) {
     modusKnopf.setAttribute('aria-label', hoeren ? 'Ablauf: zuerst hören' : 'Ablauf: zuerst selbst lesen');
   }
 
+  /** Punkte = Fortschritt bis zum nächsten Stern (zentraler Zähler, zählt über Module weiter). */
   function zeichneFortschritt(neuerStern = false) {
-    const punkte = Array.from({ length: SILBEN_JE_STERN },
-      (_, i) => `<span class="la-pip${i < s.gelesen ? ' la-voll' : ''}"></span>`).join('');
+    const voll = EINHEITEN_JE_STERN - nochBisStern(zustand, STUFE);
+    const sterne = zustand.sterne?.[STUFE - 1] ?? 0;
+    const punkte = Array.from({ length: EINHEITEN_JE_STERN },
+      (_, i) => `<span class="la-pip${i < voll ? ' la-voll' : ''}"></span>`).join('');
     fortschritt.innerHTML = `<span class="la-pips">${punkte}</span>
-      <span class="la-sterne${neuerStern ? ' la-neu' : ''}">${STERN}<span>${s.sterne}</span></span>`;
+      <span class="la-sterne${neuerStern ? ' la-neu' : ''}">${STERN}<span>${sterne}</span></span>`;
   }
 
   // ---------- Abläufe ----------
@@ -347,22 +348,28 @@ export function starte(behaelter, { einstellungen, zustand } = {}) {
     setzePunkt(1);
     markiere(null);
     zeichneSilbe(true);
+    let neuerStern = false, rundeFertig = false;
     if (!s.gezaehlt) {
+      // zählt nur, wenn das Kind den Punkt selbst über den Bogen gezogen hat, je Silbe einmal
       s.gezaehlt = true;
-      s.gelesen++;
-      let neuerStern = false;
-      if (s.gelesen >= SILBEN_JE_STERN) {
-        s.gelesen = 0;
-        s.sterne++;
-        neuerStern = true;
-        sternVerdient(zustand);
-      }
+      neuerStern = zaehle(zustand, STUFE) > 0;
+      s.runde++;
+      if (s.runde >= SILBEN_JE_RUNDE) { s.runde = 0; rundeFertig = true; }
       zeichneFortschritt(neuerStern);
     }
-    // Kontrolle bzw. Bestätigung: die Silbe einmal hören
+    // Kontrolle bzw. Bestätigung: die Silbe einmal hören, danach Stern bzw. Lob
     await sprichSilbe(silbe());
+    // Hat das Kind schon weitergewischt, nur zeigen und nicht sprechen (sonst wird das Vormachen unterbrochen)
+    const still = token !== s.token ? { ansage: false } : {};
+    if (neuerStern) feiereStern(behaelter, still);
+    else if (rundeFertig) rundenEnde(still);
     if (token !== s.token) return;
     s.vorgemacht = true;
+  }
+
+  /** VORLÄUFIG: Lob am Ende einer Runde (SILBEN_JE_RUNDE selbst gelesene Silben). */
+  function rundenEnde(optionen) {
+    lobe(behaelter, optionen);
   }
 
   // ---------- Streifen wischen ----------

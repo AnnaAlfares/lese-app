@@ -6,6 +6,7 @@
   <meta name="robots" content="noindex">
   <title>Test – Leseapparat</title>
   <link rel="stylesheet" href="../css/app.css">
+  <link rel="stylesheet" href="../css/belohnung.css">
   <!-- Nur für die Entwicklung: startet das Modul direkt (ohne Lader in app.js), Einstellungen aus der Adresse,
        z. B. test/leseapparat.html?b=9&h=bfk&t=80 (p=1: auch nicht dehnbare Laute) -->
 </head>
@@ -23,12 +24,14 @@
   <script type="module">
     import { leseEinstellungen, mitEinstellungen } from '../js/config.js';
     import { aktiviereSprechknoepfe } from '../js/audio.js';
+    import { setzeSpielstand } from '../js/sterne.js';
     import { starte } from '../js/module/leseapparat.js';
 
     // Nicht dehnbare Laute zum Testen mit ?p=1, solange config.js das Feld noch nicht kennt
     const einstellungen = leseEinstellungen();
     if (!('plosive' in einstellungen)) einstellungen.plosive = new URLSearchParams(location.search).get('p') === '1';
-    const zustand = { sterne: [0, 0, 0, 0, 0] };
+    const zustand = {};
+    setzeSpielstand(zustand);
 
     const app = document.getElementById('app');
     app.querySelector('.zurueck').href = mitEinstellungen('../index.html', einstellungen);

@@ -20,8 +20,11 @@ python3 -m http.server 8000
 
 Dann im Browser <http://localhost:8000> öffnen. Es gibt keinen Build-Schritt und keine Abhängigkeiten.
 
-Einstellungen der Lehrkraft stehen nur in der Adresse, z. B. `index.html?b=12&h=bfi&z=1&t=80`
-(b = Buchstabenstand 1–41, h = Hilfen, z = Zeitmodus, t = Sprechtempo in %). Den Link erzeugt `lehrkraft.html`.
+Einstellungen der Lehrkraft stehen nur in der Adresse, z. B. `index.html?b=12&h=bfi&z=0&t=80&p=0&ie=0`
+(b = Buchstabenstand 1–41, h = Hilfen, z = Zeitmodus (Standard aus), t = Sprechtempo in %,
+p = Plosive im Leseapparat (Feld `plosive`, Standard aus),
+ie = Wörter mit ie erlauben (Feld `ieErlaubt`, Standard aus)). Den Link erzeugt `lehrkraft.html`;
+Lesen und Schreiben der Parameter steht in `js/config.js`.
 
 ## Ordner
 

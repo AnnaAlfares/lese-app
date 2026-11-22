@@ -1,0 +1,47 @@
+/* Belohnungs-Moment (js/belohnung.js): ruhig, kein Pop-up, blockiert nichts, verschwindet von selbst. */
+
+.belohnung {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  pointer-events: none;     /* Fingertipps gehen durch */
+  z-index: 5;
+  animation: belohnung-weg var(--dauer, 1500ms) ease-out forwards;
+}
+.belohnung svg { display: block; }
+
+/* kurzes Lob: grüner Haken in einem hellen Kreis */
+.belohnung.lob {
+  width: 88px;
+  height: 88px;
+  padding: 16px;
+  border-radius: 50%;
+  background: #eef6ea;
+  color: #4f8a4f;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.08);
+}
+
+/* neuer Stern: groß, golden, schwebt ruhig nach oben */
+.belohnung.neuer-stern { animation-name: stern-schwebt; }
+.belohnung.neuer-stern svg { width: 140px; height: 140px; fill: #f2b705; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.12)); }
+
+.unsichtbar { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+@keyframes belohnung-weg {
+  0%   { opacity: 0; transform: scale(0.85); }
+  15%  { opacity: 1; transform: scale(1); }
+  75%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes stern-schwebt {
+  0%   { opacity: 0; transform: scale(0.6); }
+  20%  { opacity: 1; transform: scale(1); }
+  70%  { opacity: 1; transform: translateY(-10px); }
+  100% { opacity: 0; transform: translateY(-40px); }
+}
+
+/* Wer weniger Bewegung eingestellt hat: nur ein- und ausblenden */
+@media (prefers-reduced-motion: reduce) {
+  .belohnung, .belohnung.neuer-stern { animation-name: belohnung-weg; }
+  @keyframes belohnung-weg { 0% { opacity: 0; } 15% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
+}
