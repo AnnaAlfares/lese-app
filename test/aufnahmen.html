@@ -58,7 +58,10 @@
     let nurFehlende = false;
     let eintraege = [];
 
-    $('modus').textContent = 'Fehlt eine Laut-Aufnahme, bleibt es immer still (Lautsprecher ausgeblendet). '
+    $('modus').textContent = (leseEinstellungen().ieErlaubt
+        ? 'Wörter mit ie sind erlaubt (ie=1 in der Adresse). '
+        : 'Wörter mit ie sind aussortiert – mit ie=1 in der Adresse erscheinen sie in der Liste. ')
+      + 'Fehlt eine Laut-Aufnahme, bleibt es immer still (Lautsprecher ausgeblendet). '
       + (AUDIO.beiFehlender === 'stimme'
         ? 'Fehlt eine Silbe, ein Wort oder eine Ansage, spricht ersatzweise die Gerätestimme (config.js).'
         : 'Fehlt eine Silbe, ein Wort oder eine Ansage, bleibt es ebenfalls still (config.js).');

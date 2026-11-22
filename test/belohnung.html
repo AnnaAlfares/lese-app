@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Testseite – Belohnung</title>
+  <link rel="stylesheet" href="../css/app.css">
+  <link rel="stylesheet" href="../css/bildercode.css">
+  <link rel="stylesheet" href="../css/belohnung.css">
+  <!-- Nur für die Entwicklung: Lob und „Neuer Stern!“ (js/belohnung.js) ausprobieren. -->
+  <style>
+    body { font-size: 18px; letter-spacing: 0; }
+    main { max-width: 1400px; }
+    h1 { font-size: 32px; } h2 { font-size: 26px; }
+    .ok { color: #2e7d32; font-weight: 700; }
+    .fehl { color: #b23b00; font-weight: 700; }
+    .modul-bereich {
+      height: 360px; border: 3px dashed var(--rand); border-radius: var(--radius); background: #fff;
+      display: flex; align-items: center; justify-content: center; gap: 24px; font-size: 48px;
+    }
+    .knoepfe { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; }
+    .knoepfe button { font-size: 22px; }
+    #ansagen button { font-size: 18px; min-height: 44px; padding: 2px 12px; margin: 4px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Testseite: Belohnung</h1>
+    <p>So sieht ein Modul-Bereich aus, in dem gelobt wird. Das Zeichen erscheint oben rechts, verschwindet von selbst
+      und blockiert nichts: Die Silbe in der Mitte lässt sich währenddessen weiter antippen.</p>
+
+    <div class="knoepfe">
+      <button id="lobe">lobe(bereich)</button>
+      <button id="stern">feiereStern(bereich)</button>
+      <button id="lese">Einheit lesen: zaehle(zustand, 3)</button>
+      <button id="stumm">lobe(bereich, { ansage: false })</button>
+    </div>
+    <div class="modul-bereich" id="bereich">
+      <button id="silbe" style="font-size:64px">ma</button>
+      <span id="getippt" style="font-size:24px">0× getippt</span>
+    </div>
+    <p id="stand"></p>
+
+    <h2>Tests</h2>
+    <ul id="tests"></ul>
+
+    <h2>Alle Belohnungs-Ansagen anhören</h2>
+    <div id="ansagen"></div>
+  </main>
+
+  <script type="module">
+    import { lobe, feiereStern, naechstesLob } from '../js/belohnung.js';
+    import { zaehle, setzeSpielstand, nochBisStern } from '../js/sterne.js';
+    import { ANSAGEN, LOB_ANSAGEN } from '../js/aufnahmen.js';
+    import { sprichAnsage } from '../js/audio.js';
+
+    const bereich = document.getElementById('bereich');
+    const zustand = {};
+    setzeSpielstand(zustand, [0, 0, 6, 0, 0]);
+    const zeigeStand = () => document.getElementById('stand').textContent =
+      `Stufe 3: ${zustand.sterne[2]} Sterne, noch ${nochBisStern(zustand, 3)} Einheiten bis zum nächsten (max. 7)`;
+    zeigeStand();
+
+    document.getElementById('lobe').onclick = () => lobe(bereich);
+    document.getElementById('stern').onclick = () => feiereStern(bereich);
+    document.getElementById('stumm').onclick = () => lobe(bereich, { ansage: false });
+    document.getElementById('lese').onclick = () => {
+      if (zaehle(zustand, 3)) feiereStern(bereich);
+      zeigeStand();
+    };
+    let n = 0;
+    document.getElementById('silbe').onclick = () => document.getElementById('getippt').textContent = `${++n}× getippt`;
+
+    // Tests
+    const tests = [];
+    const pruefe = (name, ok) => tests.push(`<li class="${ok ? 'ok' : 'fehl'}">${ok ? '✓' : '✗'} ${name}</li>`);
+    pruefe('alle Lob-Ansagen haben einen Text', LOB_ANSAGEN.length >= 2 && LOB_ANSAGEN.every(id => ANSAGEN[id]));
+    pruefe('„Neuer Stern!“, „Geschafft!“, „Neuer Rekord!“ vorhanden',
+      ['neuer-stern', 'geschafft', 'neuer-rekord', 'noch-einmal'].every(id => ANSAGEN[id]));
+    const folge = Array.from({ length: 200 }, naechstesLob);
+    pruefe('Lob nie zweimal direkt hintereinander', folge.every((id, i) => i === 0 || id !== folge[i - 1]));
+    pruefe('jede Runde kommt jedes Lob genau einmal',
+      [0, 1, 2].every(r => new Set(folge.slice(r * LOB_ANSAGEN.length, (r + 1) * LOB_ANSAGEN.length)).size === LOB_ANSAGEN.length));
+    // Anzeige (stumm, damit die Seite beim Laden nicht spricht)
+    const probe = document.createElement('div');
+    document.body.append(probe);
+    lobe(probe, { ansage: false });
+    lobe(probe, { ansage: false });
+    pruefe('nur ein Zeichen gleichzeitig', probe.querySelectorAll('.belohnung').length === 1);
+    pruefe('Behälter wird position: relative', getComputedStyle(probe).position === 'relative');
+    pruefe('Zeichen lässt Fingertipps durch', getComputedStyle(probe.querySelector('.belohnung')).pointerEvents === 'none');
+    feiereStern(probe, { ansage: false });
+    pruefe('Stern ersetzt Lob', probe.querySelector('.belohnung.neuer-stern') && !probe.querySelector('.belohnung.lob'));
+    setTimeout(() => {
+      pruefe('Zeichen verschwindet von selbst', probe.querySelectorAll('.belohnung').length === 0);
+      probe.remove();
+      document.getElementById('tests').innerHTML = tests.join('');
+    }, 2500);
+    document.getElementById('tests').innerHTML = tests.join('') + '<li>(warte 2,5 s auf den letzten Test …)</li>';
+
+    // Ansagen zum Anhören
+    const ids = [...LOB_ANSAGEN, 'neuer-stern', 'geschafft', 'neuer-rekord', 'noch-einmal'];
+    document.getElementById('ansagen').innerHTML = ids.map(id => `<button data-id="${id}">▶ ${ANSAGEN[id]}</button>`).join('');
+    document.getElementById('ansagen').onclick = e => { const b = e.target.closest('button'); if (b) sprichAnsage(b.dataset.id); };
+  </script>
+</body>
+</html>

@@ -12,6 +12,10 @@
 import { BUCHSTABEN, GEWICHT_NEUER_BUCHSTABE } from '../config.js';
 import { lesbareSilben, neuestesGraphem } from '../woerter.js';
 import { sprich, sprichAnsage, kannSprechen, stoppe } from '../audio.js';
+import { zaehle } from '../sterne.js';
+import { lobe, feiereStern } from '../belohnung.js';
+
+const STUFE = 4; // Silbenteppich gehört zu Stufe 4 · Automatisieren (für die Sterne)
 
 // ---------------------------------------------------------------------------
 // Einstellungen des Moduls
@@ -201,11 +205,11 @@ function ladeCSS() {
  * Startet den Silbenteppich (gemeinsame Modul-Schnittstelle, siehe js/module/README.md).
  * Kopfzeile mit Zurück-Pfeil und Modulname baut app.js; zurück zur Stufe geht es dort.
  * @param {HTMLElement} wurzel Behälter, in den das Modul zeichnet
- * @param {{einstellungen: object, zustand?: object, zurueck?: () => void}} optionen
- *   zustand (Sterne) wird hier bewusst nicht verändert – die Sterne-Regel ist noch offen.
+ * @param {{einstellungen: object, zustand: object, zurueck?: () => void}} optionen
+ *   zustand: Spielstand; Sterne nur über zaehle() aus sterne.js
  * @returns {() => void} Aufräum-Funktion: Zeitgeber und Ton stoppen
  */
-export function starte(wurzel, { einstellungen }) {
+export function starte(wurzel, { einstellungen, zustand }) {
   ladeCSS();
   const { stand, hilfen } = einstellungen;
   if (wahl.farben === null) wahl.farben = hilfen.farben; // Vorgabe der Lehrkraft
@@ -281,7 +285,7 @@ export function starte(wurzel, { einstellungen }) {
     let takt = null;
     let aktuellSeit = performance.now(); // seit wann die aktuelle Silbe hervorgehoben ist
     const gezaehlt = new Set();          // in diesem Durchgang schon gezählte Felder (kein Doppeltzählen nach ↶)
-    wurzel.dataset.gezaehlt = 0;         // für Testseite/Tests: gezählte Silben in diesem Lauf
+    let sternZuletzt = false;            // gab der letzte Tipp einen neuen Stern? (dann kein Lob darüber)
 
     let n = 0;
     const spalten = Math.max(...zeilen.map(z => z.length));
@@ -359,6 +363,7 @@ export function starte(wurzel, { einstellungen }) {
         gezaehlt.add(i);
         silbeGelesen();
       }
+      else sternZuletzt = false;
       aktuellSeit = jetzt;
       gelesen++;
       if (modus === 'minute') $('.st-zaehler').textContent = gelesen;
@@ -367,11 +372,23 @@ export function starte(wurzel, { einstellungen }) {
       beende();
     }
 
-    // >>> STERNE: Hier wird eine wirklich gelesene Silbe gezählt (Einheit für die Stufen-Sterne:
-    // 10 Einheiten = 1 Stern, ein Zähler je Stufe). Sobald js/sterne.js (Thread 2) da ist,
-    // hier dessen Zählfunktion für Stufe 4 aufrufen. Bis dahin wird zustand.sterne nicht verändert.
+    // >>> STERNE: Eine wirklich gelesene Silbe zählt als Einheit für Stufe 4
+    // (10 Einheiten = 1 Stern; ein Zähler je Stufe, zählt über Runden und Module weiter, sterne.js).
     function silbeGelesen() {
-      wurzel.dataset.gezaehlt = Number(wurzel.dataset.gezaehlt) + 1;
+      sternZuletzt = zaehle(zustand, STUFE) > 0;
+      if (sternZuletzt) feiereStern(wurzel);
+    }
+
+    // >>> LOB: VORLÄUFIG nur am Rundenende (Annas Entscheidung zur Lob-Häufigkeit steht noch aus).
+    // Wer öfter loben will, ruft lobe(wurzel) z. B. zusätzlich am Ende jeder Zeile auf.
+    function lobeAmRundenende(neuerRekord) {
+      if (sternZuletzt) return;                                    // der neue Stern ist gerade zu sehen
+      if (neuerRekord) return lobe(wurzel, { ansage: 'neuer-rekord' });
+      if (modus === 'minute') return sprichAnsage('zeit-um').then(() => {
+        const ende = wurzel.querySelector('.st-ende');                // nur, wenn das Ergebnis noch zu sehen ist
+        if (wurzel.isConnected && ende && !ende.hidden) lobe(wurzel);
+      });
+      return lobe(wurzel);                                         // abwechselnd „Toll gemacht!“, „Prima!“ …
     }
 
     function schrittZurueck() {
@@ -416,7 +433,7 @@ export function starte(wurzel, { einstellungen }) {
         </div>`;
       ende.hidden = false;
       ende.classList.toggle('rekord', neuerRekord);
-      sprichAnsage(neuerRekord ? 'neuer-rekord' : modus === 'minute' ? 'zeit-um' : 'geschafft');
+      lobeAmRundenende(neuerRekord);
     }
 
     wurzel.onclick = e => {
@@ -425,7 +442,7 @@ export function starte(wurzel, { einstellungen }) {
       if (e.target.closest('.st-schritt')) return schrittZurueck();
       if (e.target.closest('.st-vorlesen')) return sprich(felder[i].art, felder[i].wert);
       const aktion = e.target.closest('[data-aktion]')?.dataset.aktion;
-      if (aktion === 'nochmal') { sprichAnsage('noch-einmal'); return zeigeTeppich(modus); }
+      if (aktion === 'nochmal') { sprichAnsage('noch-einmal-lesen'); return zeigeTeppich(modus); }
       if (aktion === 'auswahl') return zeigeAuswahl();
       if (aktion === 'neu') { sprichAnsage('neuer-teppich'); wahl.nummer++; return zeigeTeppich(modus); }
       if (e.target.closest('.st-teppich')) weiter(); // Antippen irgendwo auf dem Teppich: nächste Silbe
