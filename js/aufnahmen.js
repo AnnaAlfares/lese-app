@@ -66,8 +66,6 @@ export const ANSAGEN = Object.freeze({
   'blitz-schau': 'Schau genau hin!',
   'blitz-bild': 'Welches Bild passt?',
   'blitz-wort': 'Welches Wort war das?',
-  'blitz-fertig': 'Geschafft!',
-  'blitz-rekord': 'Neuer Rekord!',
   // Belohnung und allgemeine Rückmeldungen für alle Module (belohnung.js)
   ...LOB,
   'neuer-stern': 'Neuer Stern!',

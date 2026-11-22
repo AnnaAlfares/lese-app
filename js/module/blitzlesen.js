@@ -21,6 +21,7 @@ import { lesbareWoerter, sichtwoerter, waehle } from '../woerter.js';
 import { hatBild, bildHtml, woerterMitBild } from '../bilder.js';
 import { sprichWort, sprichAnsage, stoppe } from '../audio.js';
 import { zaehle } from '../sterne.js';
+import { lobe, feiereStern } from '../belohnung.js';
 
 const STUFE = 4; // Automatisieren
 
@@ -282,14 +283,20 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
     feld.className = 'blitz-feld aufloesung';
     feld.innerHTML = `<span class="blitz-wort">${wortHtml(aufgabe)}</span>`;
 
+    let neuerStern = false;
     if (richtig) {
       r.richtig++;
-      zaehle(zustand, STUFE); // nur richtige Antworten zählen für die Sterne der Stufe
+      neuerStern = zaehle(zustand, STUFE) > 0; // nur richtige Antworten zählen für die Sterne der Stufe
       zeigeStern();
     }
     const kurz = r.modus === 'minute';
     await sprichUndWarte(sprichWort(aufgabe.wort), 2500);
     if (meinLauf !== lauf) return;
+    // Neuer Stern der Stufe (alle 10 richtigen Antworten): erst nach dem Wort, damit sich die Töne nicht abschneiden
+    if (neuerStern) {
+      await sprichUndWarte(feiereStern(behaelter), 2500);
+      if (meinLauf !== lauf) return;
+    }
     await warte(richtig ? (kurz ? 200 : 500) : (kurz ? 800 : 1500));
     if (meinLauf !== lauf) return;
     naechsteAufgabe();
@@ -338,10 +345,11 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
         </div>
       </div>`;
     r = null;
-    // Ansage: „Geschafft!“ bzw. „Neuer Rekord!“, dann die Zahl (Aufnahmen gibt es für 1–16)
+    // Lob (Haken) mit „Geschafft!“ bzw. „Neuer Rekord!“, dann die Zahl (Aufnahmen gibt es für 1–16).
+    // VORLÄUFIG wird nur am Rundenende gelobt – die Entscheidung zur Lob-Häufigkeit steht noch aus.
     const meinLauf = lauf;
     (async () => {
-      await sprichUndWarte(sprichAnsage(rekord ? 'blitz-rekord' : 'blitz-fertig'), 2500);
+      await sprichUndWarte(lobe(behaelter, { ansage: rekord ? 'neuer-rekord' : 'geschafft' }), 2500);
       if (meinLauf === lauf && ergebnis.richtig >= 1 && ergebnis.richtig <= 16) sprichAnsage(`zahl-${ergebnis.richtig}`);
     })();
   }
