@@ -63,26 +63,26 @@
       const bis = async sel => { for (let i = 0; i < 200 && !modul.querySelector(sel); i++) await warte(50); };
       const klick = sel => modul.querySelector(sel)?.click();
       const karte = async richtig => {
-        await bis('.blitz-feld.leer .blitz-fragezeichen');
+        await bis('.blitz-feld.blitz-leer .blitz-fragezeichen');
         await bis('.blitz-karte');
         [...modul.querySelectorAll('.blitz-karte')].find(k => (k.dataset.wort === gesehen) === richtig).click();
       };
       let gesehen = null;
       new MutationObserver(() => {
-        const w = modul.querySelector('.blitz-feld.blitz .blitz-wort');
+        const w = modul.querySelector('.blitz-feld.blitz-zeigt .blitz-wort');
         if (w) gesehen = w.textContent;
       }).observe(modul, { subtree: true, childList: true, attributes: true });
 
       (async () => {
         if (ablauf === 'start') return;
         klick(ablauf === 'minute' ? '[data-modus="minute"]' : '[data-modus="runde"]');
-        if (ablauf === 'blitz') { await bis('.blitz-feld.blitz'); document.body.dataset.fertig = 1; return; }
+        if (ablauf === 'blitz') { await bis('.blitz-feld.blitz-zeigt'); document.body.dataset.fertig = 1; return; }
         if (ablauf === 'wahl') return;
         if (ablauf === 'richtig' || ablauf === 'falsch') { await karte(ablauf === 'richtig'); return; }
         if (ablauf === 'ende' || ablauf === 'minute') {
           for (let i = 0; i < 40 && !modul.querySelector('.blitz-ende'); i++) {
             await karte(i % 4 !== 3);
-            await bis('.blitz-feld.bereit, .blitz-ende');
+            await bis('.blitz-feld.blitz-bereit, .blitz-ende');
           }
         }
       })();
