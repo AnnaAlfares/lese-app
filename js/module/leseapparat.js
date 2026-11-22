@@ -29,7 +29,7 @@ const STUFE = 3; // Leseapparat gehört zu Stufe 3 „Laute verbinden“
 // ruhig zusammengefasst (fasseSterneZusammen; bei 0 neuen Sternen lobt die Funktion selbst).
 // Eine Runde = so viele selbst gelesene Silben.
 const SILBEN_JE_RUNDE = 10;
-// VORLÄUFIG (Entscheidung steht aus): kurzes Lob zur Halbzeit der Runde. false = abgeschaltet.
+// Kurzes Lob zur Halbzeit der Runde (Entscheidung Anna: bleibt, nicht aufdringlich). false = abgeschaltet.
 const LOB_ZUR_HALBZEIT = true;
 
 // Geometrie des Bogens (SVG-Koordinaten, viewBox 0 0 1000 200).
