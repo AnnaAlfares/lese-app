@@ -83,24 +83,32 @@ export const modulAnsage = name => `modul-${dateiStamm(name)}`;
 // Liste aller benötigten Aufnahmen bis zu einem Buchstabenstand
 // ---------------------------------------------------------------------------
 /**
- * @returns {{art, wert, datei, sprechtext, hinweis, ab}[]}
+ * @returns {{art, wert, datei, sprechtext, hinweis, ab, nurMitIe}[]}
  *   wert: Schlüssel, mit dem die App die Aufnahme anfragt (Graphem-id, Silbe, Wort, Ansage-id)
  *   sprechtext: was gesprochen wird; hinweis: wie; ab: ab welchem Buchstabenstand gebraucht
+ *   nurMitIe: wird nur gebraucht, wenn die Lehrkraft „Wörter mit ie erlauben“ einschaltet.
+ * Die Liste enthält Silben und Wörter mit ie IMMER (unabhängig von ie=1 in der Adresse),
+ * damit sie vorsorglich aufgenommen werden können.
  */
-export function aufnahmeliste(stand = BUCHSTABEN.length, optionen) {
+export function aufnahmeliste(stand = BUCHSTABEN.length) {
+  const MIT_IE = { ieErlaubt: true };
+  const ohneIeSilben = new Set(lesbareSilben(stand, { ieErlaubt: false }).map(s => s.text));
+  const ohneIeWoerter = new Set(lesbareWoerter(stand, { ieErlaubt: false }).map(w => w.wort));
   const liste = [];
   BUCHSTABEN.slice(0, stand).forEach((b, i) => liste.push({
     art: 'laut', wert: b.id, datei: datei('laut', b.id), ab: i + 1,
     sprechtext: `/${b.id}/ ${b.beispiel}`,
     hinweis: lautHinweis(b.id),
   }));
-  for (const s of lesbareSilben(stand, optionen).sort((a, b) => a.ab - b.ab || a.text.localeCompare(b.text))) {
-    liste.push({ art: 'silbe', wert: s.text, datei: datei('silbe', s.text), ab: s.ab,
+  for (const s of lesbareSilben(stand, MIT_IE).sort((a, b) => a.ab - b.ab || a.text.localeCompare(b.text))) {
+    const nurMitIe = !ohneIeSilben.has(s.text);
+    liste.push({ art: 'silbe', wert: s.text, datei: datei('silbe', s.text), ab: s.ab, nurMitIe,
       sprechtext: s.text, hinweis: 'normal, deutlich' });
   }
-  const woerter = lesbareWoerter(stand, optionen).sort((a, b) => a.ab - b.ab || a.rang - b.rang);
+  const woerter = lesbareWoerter(stand, MIT_IE).sort((a, b) => a.ab - b.ab || a.rang - b.rang);
   for (const w of woerter) {
-    liste.push({ art: 'wort', wert: w.wort, datei: datei('wort', w.wort), ab: w.ab,
+    const nurMitIe = !ohneIeWoerter.has(w.wort);
+    liste.push({ art: 'wort', wert: w.wort, datei: datei('wort', w.wort), ab: w.ab, nurMitIe,
       sprechtext: w.wort, hinweis: 'normal, deutlich' });
   }
   const zusatz = [...SICHTWOERTER.map(w => [w, 'Sichtwort, normal']),
