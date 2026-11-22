@@ -10,8 +10,8 @@
 .st-gruppe button { min-width: 110px; font-size: 36px; }
 .st-gruppe button[aria-pressed="true"] { border-color: #7b4ea0; background: #efe2f7; border-width: 4px; }
 .st-gruppe button[aria-pressed="false"] { color: #777; }
-.st-optionen .blau { color: var(--silbe-blau); }
-.st-optionen .rot { color: var(--silbe-rot); }
+.st-optionen .st-blau { color: var(--silbe-blau); }
+.st-optionen .st-rot { color: var(--silbe-rot); }
 .st-modi .kachel { background: #eadcf2; }
 
 /* ---------- Lesen ---------- */
@@ -44,7 +44,7 @@
   touch-action: manipulation;
   transition: filter 0.3s;
 }
-.st-teppich.verdeckt { filter: blur(14px); pointer-events: none; }
+.st-teppich.st-verdeckt { filter: blur(14px); pointer-events: none; }
 
 .st-zeile {
   display: grid;
@@ -60,12 +60,12 @@
   border-radius: 16px;
   transition: opacity 0.15s, background-color 0.15s;
 }
-.st-feld.laut { color: #555; }                          /* einzelner Laut am Zeilenanfang / Vokalzeile */
-.st-feld.blau { color: var(--silbe-blau); }
-.st-feld.rot { color: var(--silbe-rot); }
-.st-feld .koenig { text-decoration: underline; text-decoration-thickness: 0.08em; text-underline-offset: 0.15em; }
-.st-feld.aktuell { background: var(--neu); border-color: #e0b84a; }
-.st-feld.gelesen { opacity: 0.35; }
+.st-feld.st-laut { color: #555; }                          /* einzelner Laut am Zeilenanfang / Vokalzeile */
+.st-feld.st-blau { color: var(--silbe-blau); }
+.st-feld.st-rot { color: var(--silbe-rot); }
+.st-feld .st-koenig { text-decoration: underline; text-decoration-thickness: 0.08em; text-underline-offset: 0.15em; }
+.st-feld.st-aktuell { background: var(--neu); border-color: #e0b84a; }
+.st-feld.st-gelesen { opacity: 0.35; }
 
 .st-start {
   position: absolute;
@@ -95,9 +95,8 @@
 .st-ende[hidden] { display: none; }
 .st-ergebnis { display: flex; align-items: center; gap: 32px; }
 .st-ergebnis svg { width: 160px; height: 160px; }
-.st-ende.rekord .st-ergebnis svg { animation: st-huepfen 0.6s ease-out 2; }
-.st-neue-sterne { display: flex; gap: 12px; }
-.st-neue-sterne svg { width: 72px; height: 72px; }
+.st-ende.st-rekord-neu .st-ergebnis svg { animation: st-huepfen 0.6s ease-out 2; }
+.st-ende-sterne { position: relative; min-height: 96px; min-width: 300px; display: flex; justify-content: center; }
 .st-gross { font-size: 96px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .st-knoepfe { display: flex; gap: 32px; }
 .st-knoepfe button { width: 140px; height: 120px; font-size: 64px; }
@@ -109,5 +108,5 @@
   40% { transform: translateY(-24px) scale(1.1); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .st-ende.rekord .st-ergebnis svg { animation: none; }
+  .st-ende.st-rekord-neu .st-ergebnis svg { animation: none; }
 }

@@ -12,8 +12,8 @@
 import { BUCHSTABEN, GEWICHT_NEUER_BUCHSTABE } from '../config.js';
 import { lesbareSilben, neuestesGraphem } from '../woerter.js';
 import { sprich, sprichAnsage, kannSprechen, stoppe } from '../audio.js';
-import { zaehle } from '../sterne.js';
-import { lobe } from '../belohnung.js';
+import { starteRunde } from '../sterne.js';
+import { lobe, fasseSterneZusammen } from '../belohnung.js';
 
 const STUFE = 4; // Silbenteppich gehört zu Stufe 4 · Automatisieren (für die Sterne)
 
@@ -149,13 +149,13 @@ function geschrieben(grapheme, schreibung) {
 }
 
 function feldHTML(feld, i, schreibung, hilfen) {
-  if (feld.art === 'leer') return '<span class="st-feld leer"></span>';
+  if (feld.art === 'leer') return '<span class="st-feld st-leer"></span>';
   const texte = geschrieben(feld.grapheme, schreibung);
   const vokal = id => BUCHSTABEN.find(b => b.id === id)?.typ === 'vokal';
   const inhalt = feld.grapheme.map((g, j) =>
-    `<span class="${hilfen.koenig && vokal(g.id) ? 'koenig' : ''}">${texte[j]}</span>`).join('');
-  const farbe = hilfen.farben && feld.farbe !== null ? (feld.farbe ? ' rot' : ' blau') : '';
-  return `<span class="st-feld ${feld.art}${farbe}" data-i="${i}">${inhalt}</span>`;
+    `<span class="${hilfen.koenig && vokal(g.id) ? 'st-koenig' : ''}">${texte[j]}</span>`).join('');
+  const farbe = hilfen.farben && feld.farbe !== null ? (feld.farbe ? ' st-rot' : ' st-blau') : '';
+  return `<span class="st-feld st-${feld.art}${farbe}" data-i="${i}">${inhalt}</span>`;
 }
 
 const zeitText = ms => {
@@ -208,7 +208,7 @@ function ladeCSS() {
  * Kopfzeile mit Zurück-Pfeil und Modulname baut app.js; zurück zur Stufe geht es dort.
  * @param {HTMLElement} wurzel Behälter, in den das Modul zeichnet
  * @param {{einstellungen: object, zustand: object, zurueck?: () => void}} optionen
- *   zustand: Spielstand; Sterne nur über zaehle() aus sterne.js
+ *   zustand: Spielstand; Sterne nur über starteRunde() aus sterne.js
  * @returns {() => void} Aufräum-Funktion: Zeitgeber und Ton stoppen
  */
 export function starte(wurzel, { einstellungen, zustand }) {
@@ -224,7 +224,7 @@ export function starte(wurzel, { einstellungen, zustand }) {
     const knopf = (gruppe, wert, inhalt, label) =>
       `<button data-${gruppe}="${wert}" aria-pressed="${wahl[gruppe] === wert}" aria-label="${label}">${inhalt}</button>`;
     const beispiel = (a, b) => wahl.farben
-      ? `<span class="blau">${a}</span><span class="rot">${b}</span>` : `${a}${b}`;
+      ? `<span class="st-blau">${a}</span><span class="st-rot">${b}</span>` : `${a}${b}`;
     wurzel.innerHTML = `
       <div class="st-optionen">
         <div class="st-gruppe">
@@ -287,7 +287,7 @@ export function starte(wurzel, { einstellungen, zustand }) {
     let takt = null;
     let aktuellSeit = performance.now(); // seit wann die aktuelle Silbe hervorgehoben ist
     const gezaehlt = new Set();          // in diesem Durchgang schon gezählte Felder (kein Doppeltzählen nach ↶)
-    let neueSterne = 0;                  // in diesem Durchgang neu gewonnene Sterne (still gezählt)
+    const runde = starteRunde(zustand, STUFE); // Sterne dieses Durchgangs, still gezählt (sterne.js)
     let halbzeitGelobt = !LOB_ZUR_HALBZEIT;
     let vorsprechen = null;              // läuft gerade das Vorsprechen (Lautsprecher)? Promise oder null
 
@@ -306,7 +306,7 @@ export function starte(wurzel, { einstellungen, zustand }) {
         <button class="lautsprecher st-vorlesen" aria-label="Vorlesen">${SYMBOL.lautsprecher}</button>
       </div>
       <div class="st-flaeche">
-        <div class="st-teppich${zeit ? ' verdeckt' : ''}" style="--zeilen:${zeilen.length};--spalten:${spalten}">
+        <div class="st-teppich${zeit ? ' st-verdeckt' : ''}" style="--zeilen:${zeilen.length};--spalten:${spalten}">
           ${zeilen.map(z => `<div class="st-zeile">${z.map(f => feldHTML(f, f.art === 'leer' ? -1 : n++, wahl.schreibung, h))
             .join('')}</div>`).join('')}
         </div>
@@ -321,8 +321,8 @@ export function starte(wurzel, { einstellungen, zustand }) {
 
     function markiere() {
       feldEl.forEach((el, k) => {
-        el.classList.toggle('aktuell', k === i && !fertig);
-        el.classList.toggle('gelesen', k < i || fertig);
+        el.classList.toggle('st-aktuell', k === i && !fertig);
+        el.classList.toggle('st-gelesen', k < i || fertig);
       });
       const f = felder[i];
       zeigeLautsprecher($('.st-vorlesen'), f.art, f.wert);
@@ -337,7 +337,7 @@ export function starte(wurzel, { einstellungen, zustand }) {
     function start() {
       laeuft = true;
       startZeit = aktuellSeit = performance.now();
-      $('.st-teppich').classList.remove('verdeckt');
+      $('.st-teppich').classList.remove('st-verdeckt');
       $('.st-start').remove();
       takt = setInterval(tick, 200);
     }
@@ -387,47 +387,23 @@ export function starte(wurzel, { einstellungen, zustand }) {
     // Während des Lesens wird NICHT gefeiert (Entscheidung Anna: sonst unruhig) – nur still gezählt;
     // die neuen Sterne nennt die Zusammenfassung am Rundenende.
     function silbeGelesen() {
-      neueSterne += zaehle(zustand, STUFE);
+      runde.zaehle();
     }
 
     // >>> LOB (Entscheidung Anna): zur Halbzeit der Runde (abschaltbar: LOB_ZUR_HALBZEIT) und am Rundenende.
     // Läuft gerade das Vorsprechen, wartet das Lob, bis es zu Ende ist (nichts wird abgeschnitten).
     const nachVorsprechen = fn => (vorsprechen ? vorsprechen.then(fn) : fn());
-    const ergebnisSichtbar = () => {
-      const ende = wurzel.querySelector('.st-ende');
-      return wurzel.isConnected && ende && !ende.hidden && ende.dataset.lauf === lauf;
-    };
-    const lauf = String(Math.random()); // Kennung dieses Durchgangs (gegen verspätete Ansagen nach „Noch einmal“)
-
     function lobeZurHalbzeit() {
       halbzeitGelobt = true;
       nachVorsprechen(() => { if (laeuft && !fertig && wurzel.isConnected) lobe(wurzel); });
     }
 
-    /** Ansagen nacheinander sprechen, solange das Ergebnis dieses Durchgangs zu sehen ist. */
-    async function sprichNacheinander(ids) {
-      for (const id of ids) {
-        if (!ergebnisSichtbar()) return;
-        await sprichAnsage(id);
-      }
-    }
-
-    // Ruhige Zusammenfassung am Rundenende: (Zeit um / neuer Rekord,) dann
-    // „Du hast in dieser Übung … neue Sterne bekommen.“ – oder bei 0 neuen Sternen ein Lob.
-    function lobeAmRundenende(neuerRekord) {
-      nachVorsprechen(async () => {
-        if (!ergebnisSichtbar()) return;
-        const vorweg = [modus === 'minute' && !neuerRekord && 'zeit-um', neuerRekord && 'neuer-rekord'].filter(Boolean);
-        if (neueSterne === 0) {
-          await sprichNacheinander(vorweg);
-          if (ergebnisSichtbar()) lobe(wurzel);                    // abwechselnd „Toll gemacht!“, „Prima!“ …
-          return;
-        }
-        lobe(wurzel, { ansage: false });                           // nur das ruhige Zeichen, gesprochen wird unten
-        const satz = neueSterne === 1 ? ['sterne-einen-neuen']
-          : ['sterne-du-hast', `zahl-${neueSterne}`, 'sterne-neue-bekommen'];
-        await sprichNacheinander([...vorweg, ...satz]);
-      });
+    // Ruhige Zusammenfassung am Rundenende (belohnung.js): vorweg „Die Zeit ist um.“ bzw. „Neuer Rekord!“,
+    // dann „Du hast in dieser Übung … neue Sterne bekommen.“ – bei 0 neuen Sternen lobt fasseSterneZusammen selbst.
+    // Bricht von allein ab, wenn das Ergebnis nicht mehr zu sehen ist (z. B. nach „Noch einmal“).
+    function fasseRundeZusammen(neuerRekord) {
+      const vorweg = neuerRekord ? ['neuer-rekord'] : modus === 'minute' ? ['zeit-um'] : [];
+      nachVorsprechen(() => fasseSterneZusammen($('.st-ende-sterne'), runde.neu, { vorweg }));
     }
 
     function schrittZurueck() {
@@ -462,20 +438,18 @@ export function starte(wurzel, { einstellungen, zustand }) {
       const ende = $('.st-ende');
       ende.innerHTML = `
         <div class="st-ergebnis">
-          ${neuerRekord ? SYMBOL.pokal : neueSterne ? '' : SYMBOL.stern}
+          ${neuerRekord ? SYMBOL.pokal : runde.neu ? '' : SYMBOL.stern}
           ${ergebnis}
         </div>
-        ${neueSterne ? `<div class="st-neue-sterne" aria-label="${neueSterne} neue Sterne">
-          ${SYMBOL.stern.repeat(neueSterne)}</div>` : ''}
+        <div class="st-ende-sterne"></div>
         <div class="st-knoepfe">
           <button data-aktion="nochmal" aria-label="Noch einmal">↻</button>
           <button data-aktion="neu" aria-label="Neuer Teppich">${SYMBOL.teppich}</button>
           <button data-aktion="auswahl" aria-label="Andere Übungsart wählen">${SYMBOL.auswahl}</button>
         </div>`;
       ende.hidden = false;
-      ende.dataset.lauf = lauf;
-      ende.classList.toggle('rekord', neuerRekord);
-      lobeAmRundenende(neuerRekord);
+      ende.classList.toggle('st-rekord-neu', neuerRekord);
+      fasseRundeZusammen(neuerRekord);
     }
 
     wurzel.onclick = e => {
