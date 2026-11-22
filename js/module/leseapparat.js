@@ -77,11 +77,11 @@ function mische(liste) {
  * Gemischter Streifen; das neueste Graphem steht vorne und kommt bis zu
  * GEWICHT_NEUER_BUCHSTABE-mal vor, gleichmäßig verteilt (nie zweimal hintereinander).
  */
-function baueStreifenEinmal(grapheme, neuId) {
+function baueStreifenEinmal(grapheme, neuId, hoechstens = GEWICHT_NEUER_BUCHSTABE) {
   const rest = mische(grapheme.filter(b => b.id !== neuId));
   const neu = grapheme.find(b => b.id === neuId);
   if (!neu) return rest;
-  const anzahl = Math.max(1, Math.min(GEWICHT_NEUER_BUCHSTABE, rest.length));
+  const anzahl = Math.max(1, Math.min(hoechstens, rest.length));
   const n = rest.length + anzahl;
   const plaetze = new Set(Array.from({ length: anzahl }, (_, i) => Math.round(i * n / anzahl)));
   const ergebnis = [];
@@ -102,15 +102,21 @@ function hatAehnlicheNachbarn(streifen) {
 }
 
 /**
- * Gemischter Streifen wie oben; ähnliche Laute möglichst nicht nebeneinander.
- * Mischt dafür bis zu 50-mal neu; gelingt es nicht (sehr wenige Laute), bleibt der letzte Versuch.
+ * Gemischter Streifen wie oben; ähnliche Laute stehen nie direkt nebeneinander
+ * (Entscheidung Anna: immer mindestens ein anderer Buchstabe dazwischen).
+ * Mischt dafür neu. Geht es mit der vollen Häufigkeit des neuesten Buchstabens nicht
+ * (z. B. Stand 8: n neu, dreimal unter 7 Lauten → jeder freie Platz grenzt an ein n),
+ * kommt der neueste Buchstabe seltener vor – notfalls nur einmal.
  */
 export function baueStreifen(grapheme, neuId) {
-  let streifen = baueStreifenEinmal(grapheme, neuId);
-  for (let versuch = 0; versuch < 50 && hatAehnlicheNachbarn(streifen); versuch++) {
-    streifen = baueStreifenEinmal(grapheme, neuId);
+  let streifen = [];
+  for (let hoechstens = GEWICHT_NEUER_BUCHSTABE; hoechstens >= 1; hoechstens--) {
+    for (let versuch = 0; versuch < 100; versuch++) {
+      streifen = baueStreifenEinmal(grapheme, neuId, hoechstens);
+      if (!hatAehnlicheNachbarn(streifen)) return streifen;
+    }
   }
-  return streifen;
+  return streifen; // nur bei sehr wenigen Lauten denkbar (z. B. nur m und n), kommt im Zwergenheft nicht vor
 }
 
 /**
