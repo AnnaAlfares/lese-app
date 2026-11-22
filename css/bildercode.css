@@ -48,7 +48,7 @@
 .code-platz .code-zahl { font-size: 18px; min-width: 28px; }
 .code-platz .code-anlaut { font-size: 18px; }
 
-.code-loeschen svg, .lautsprecher svg { width: 44px; height: 44px; }
+.code-loeschen svg, .code-eingabe .lautsprecher svg { width: 44px; height: 44px; }
 .code-loeschen { height: 96px; width: 96px; }
 .code-neu { height: 96px; font-size: 28px; background: #e9f3e4; border-color: #b9d6ae; }
 .code-neu svg { width: 44px; height: 44px; color: var(--code-gruen); }
@@ -76,19 +76,19 @@
 .code-eingabe.richtig .code-bilder { opacity: 0.5; }
 
 /* ---------- Abschluss ---------- */
-.abschluss .kopf { gap: 20px; }
-.abschluss-sterne { display: flex; flex-wrap: wrap; gap: 12px; flex: 1; justify-content: center; }
-.stufen-sterne {
+.code-abschluss .kopf { gap: 20px; }
+.code-abschluss-sterne { display: flex; flex-wrap: wrap; gap: 12px; flex: 1; justify-content: center; }
+.code-stufe-sterne {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 6px 14px;
   border-radius: 999px;
 }
-.stufen-sterne .nr { font-size: 24px; font-weight: 700; opacity: 0.6; }
-.stufen-sterne .stern svg { width: 22px; height: 22px; }
+.code-stufe-sterne .nr { font-size: 24px; font-weight: 700; opacity: 0.6; }
+.code-stufe-sterne .sterne-leiste .stern svg { width: 22px; height: 22px; }
 
-.abschluss-code {
+.code-abschluss-code {
   display: flex;
   justify-content: center;
   gap: 24px;
@@ -99,21 +99,21 @@
 .code-bild.gross .code-anlaut { font-size: 28px; }
 .code-bild.spricht { border-color: var(--akzent); box-shadow: 0 0 0 6px rgba(58, 110, 165, 0.25); }
 
-.abschluss-knoepfe { display: flex; justify-content: center; gap: 32px; }
-.abschluss-knoepfe button { height: 96px; }
-.abschluss-knoepfe .vorlesen { width: 120px; }
-.abschluss-knoepfe .vorlesen svg { width: 52px; height: 52px; }
-.abschluss-knoepfe .ende svg { width: 40px; height: 40px; color: var(--code-gruen); }
-.abschluss-knoepfe .ende:disabled { opacity: 0.35; cursor: default; }
+.code-abschluss-knoepfe { display: flex; justify-content: center; gap: 32px; }
+.code-abschluss-knoepfe button { height: 96px; }
+.code-abschluss-knoepfe .code-vorlesen { width: 120px; }
+.code-abschluss-knoepfe .code-vorlesen svg { width: 52px; height: 52px; }
+.code-abschluss-knoepfe .code-ende svg { width: 40px; height: 40px; color: var(--code-gruen); }
+.code-abschluss-knoepfe .code-ende:disabled { opacity: 0.35; cursor: default; }
 
 /* ---------- Sterne (Stufen-Kacheln und Abschluss) ---------- */
-.sterne { display: inline-flex; gap: 2px; }
-.stern svg { width: 26px; height: 26px; fill: var(--stern-leer); }
-.stern.voll svg { fill: var(--stern-voll); }
-.kachel .sterne svg { width: 26px; height: 26px; }
+.sterne-leiste { display: inline-flex; gap: 2px; }
+.sterne-leiste .stern svg { width: 26px; height: 26px; fill: var(--stern-leer); }
+.sterne-leiste .stern.voll svg { fill: var(--stern-voll); }
+.kachel .sterne-leiste svg { width: 26px; height: 26px; }
 
 /* Fertig-Knopf auf der Startseite */
-.fertig svg { width: 36px; height: 36px; color: var(--code-gruen); }
+.kopf .code-fertig svg { width: 36px; height: 36px; color: var(--code-gruen); }
 
 /* Stufen-Kacheln haben jetzt eine Sternenzeile: Höhe darf mitwachsen */
-.kacheln .kachel { height: auto; min-height: 280px; }
+.kachel[data-stufe] { height: auto; min-height: 280px; }
