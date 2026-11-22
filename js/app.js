@@ -3,7 +3,7 @@
 
 import { STUFEN, leseEinstellungen } from './config.js';
 import { aktiviereSprechknoepfe, sprichAnsage } from './audio.js';
-import { modulAnsage } from './aufnahmen.js';
+import { modulAnsage, dateiStamm } from './aufnahmen.js';
 import { zeigeCodeEingabe, zeigeAbschluss, sterneHtml } from './codeeingabe.js';
 import { setzeSpielstand } from './sterne.js';
 
@@ -73,14 +73,67 @@ function zeigeStufe(nr) {
     </div>
     <div class="kacheln">
       ${stufe.module.map(m => `
-        <button class="kachel aus" style="background:${stufe.farbe}" data-sprich-ansage="${modulAnsage(m)}">
+        <button class="kachel aus" style="background:${stufe.farbe}" data-sprich-ansage="${modulAnsage(m)}"
+          data-modul="${m}" data-in-stufe="${stufe.nr}">
           <span class="titel">${m}</span>
           <span class="bald">kommt bald</span>
         </button>`).join('')}
     </div>`;
+  // Kacheln freischalten, deren Modul-Datei es schon gibt
+  for (const k of app.querySelectorAll('[data-modul]')) {
+    fetch(modulUrl(k.dataset.modul), { method: 'HEAD', cache: 'no-cache' })
+      .then(r => { if (r.ok) { k.classList.remove('aus'); k.querySelector('.bald')?.remove(); } }, () => {});
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Module werden automatisch eingetragen: Datei js/module/<dateiStamm(name)>.js
+// („Wort-Fang“ → wort-fang.js). Gibt es die Datei, wird die Kachel aktiv.
+// Schnittstelle: starte(behaelter, { einstellungen, zustand, zurueck }) → optional Aufräum-Funktion.
+// Genaue Beschreibung: js/module/README.md
+// ---------------------------------------------------------------------------
+const modulUrl = name => new URL(`./module/${dateiStamm(name)}.js`, import.meta.url).href;
+let beendeModul = null;
+let aktuelleStufe = null;
+let aktivesModul = null; // Kennung des angezeigten Moduls (gegen verspätete zurueck()-Aufrufe)
+
+async function zeigeModul(name, stufenNr) {
+  let modul;
+  try { modul = await import(modulUrl(name)); } catch { return; } // noch nicht gebaut
+  aktuelleStufe = stufenNr;
+  app.innerHTML = `
+    <div class="kopf">
+      <button class="zurueck" aria-label="Zurück">${PFEIL_ZURUECK}</button>
+      <h1>${name}</h1>
+    </div>
+    <div class="modul"></div>`;
+  const meinModul = {};
+  aktivesModul = meinModul;
+  // zurueck(): das Modul kehrt selbst zur Stufe zurück (wirkt nur, solange es noch angezeigt wird)
+  const zurueck = () => { if (aktivesModul === meinModul) verlasseModul(); };
+  const aufraeumen = modul.starte(app.querySelector('.modul'), { einstellungen, zustand, zurueck });
+  const fn = typeof aufraeumen === 'function' ? aufraeumen : null;
+  if (aktivesModul === meinModul) beendeModul = fn;
+  else fn?.(); // zurueck() wurde schon während starte() aufgerufen
+}
+
+/** Modul aufräumen und zur Stufe zurückkehren. */
+function verlasseModul() {
+  const aufraeumen = beendeModul;
+  const nr = aktuelleStufe;
+  beendeModul = null;
+  aktuelleStufe = null;
+  aktivesModul = null;
+  try { aufraeumen?.(); } catch (fehler) { console.error(fehler); }
+  zeigeStufe(nr);
 }
 
 app.addEventListener('click', e => {
+  const modulKachel = e.target.closest('[data-modul]:not(.aus)');
+  if (modulKachel) {
+    zeigeModul(modulKachel.dataset.modul, Number(modulKachel.dataset.inStufe));
+    return;
+  }
   const kachel = e.target.closest('[data-stufe]');
   if (kachel) {
     const stufe = STUFEN[kachel.dataset.stufe - 1];
@@ -94,7 +147,11 @@ app.addEventListener('click', e => {
   }
   if (e.target.closest('.zurueck') && !e.target.closest('.abschluss')) {
     sprichAnsage('zurueck');
-    zeigeStart();
+    if (aktuelleStufe) {
+      verlasseModul();
+    } else {
+      zeigeStart();
+    }
   }
 });
 

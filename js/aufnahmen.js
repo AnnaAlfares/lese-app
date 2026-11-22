@@ -52,6 +52,12 @@ export const ANSAGEN = Object.freeze({
   'code-eingeben': 'Tippe die Bilder von deiner Karte an.',
   'ich-bin-neu': 'Ich bin neu.',
   'dein-code': 'Das ist dein neuer Code.',
+  // Blitzlesen
+  'blitz-schau': 'Schau genau hin!',
+  'blitz-bild': 'Welches Bild passt?',
+  'blitz-wort': 'Welches Wort war das?',
+  'blitz-fertig': 'Geschafft!',
+  'blitz-rekord': 'Neuer Rekord!',
 });
 
 /** Ansage-id eines Modulnamens, z. B. 'Wo hörst du es?' → 'modul-wo-hoerst-du-es'. */
