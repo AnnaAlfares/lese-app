@@ -34,6 +34,16 @@ export function datei(art, wert) {
 // Ansagen: alles, was die App sagt und kein Laut, keine Silbe, kein Lesewort ist.
 // Module tragen hier ihre Ansagen ein (id → Sprechtext), nie im Modul selbst.
 // ---------------------------------------------------------------------------
+/** Lob-Ansagen (id → Text), wechseln sich ab (belohnung.js). Neue einfach hier ergänzen. */
+const LOB = {
+  'lob-toll': 'Toll gemacht!',
+  'lob-gut': 'Das hast du gut gemacht!',
+  'lob-super': 'Super!',
+  'lob-prima': 'Prima!',
+  'lob-klasse': 'Klasse!',
+};
+export const LOB_ANSAGEN = Object.freeze(Object.keys(LOB));
+
 const ZAHLWOERTER = ['eins', 'zwei', 'drei', 'vier', 'fünf', 'sechs', 'sieben', 'acht', 'neun', 'zehn',
   'elf', 'zwölf', 'dreizehn', 'vierzehn', 'fünfzehn', 'sechzehn'];
 /** Namen der 16 Bildercode-Bilder (Reihenfolge = Zahl 1–16). Werden als Wörter (woerter/…) aufgenommen. */
@@ -49,10 +59,24 @@ export const ANSAGEN = Object.freeze({
   // Bildercode (CLAUDE.md, Regel 10): Zahlen; die Bildnamen sind Wörter (siehe CODEBILDER)
   ...Object.fromEntries(ZAHLWOERTER.map((z, i) => [`zahl-${i + 1}`, z])),
   'schau-noch-einmal': 'Schau noch einmal auf deine Karte.',
+  'code-eingeben': 'Tippe die Bilder von deiner Karte an.',
+  'ich-bin-neu': 'Ich bin neu.',
+  'dein-code': 'Das ist dein neuer Code.',
+  // Blitzlesen
+  'blitz-schau': 'Schau genau hin!',
+  'blitz-bild': 'Welches Bild passt?',
+  'blitz-wort': 'Welches Wort war das?',
+  'blitz-fertig': 'Geschafft!',
+  'blitz-rekord': 'Neuer Rekord!',
+  // Belohnung und allgemeine Rückmeldungen für alle Module (belohnung.js)
+  ...LOB,
+  'neuer-stern': 'Neuer Stern!',
+  'geschafft': 'Geschafft!',
+  'neuer-rekord': 'Neuer Rekord!',
+  'noch-einmal': 'Versuch es noch einmal.',
   // Modul Rutschen
   'rutschen-anleitung': 'Leg deinen Finger auf die Kugel und rutsch langsam hinunter. Sprich mit!',
   'rutschen-jetzt-du': 'Jetzt lies du.',
-  'rutschen-geschafft': 'Super, geschafft!',
 });
 
 /** Ansage-id eines Modulnamens, z. B. 'Wo hörst du es?' → 'modul-wo-hoerst-du-es'. */
@@ -66,18 +90,18 @@ export const modulAnsage = name => `modul-${dateiStamm(name)}`;
  *   wert: Schlüssel, mit dem die App die Aufnahme anfragt (Graphem-id, Silbe, Wort, Ansage-id)
  *   sprechtext: was gesprochen wird; hinweis: wie; ab: ab welchem Buchstabenstand gebraucht
  */
-export function aufnahmeliste(stand = BUCHSTABEN.length) {
+export function aufnahmeliste(stand = BUCHSTABEN.length, optionen) {
   const liste = [];
   BUCHSTABEN.slice(0, stand).forEach((b, i) => liste.push({
     art: 'laut', wert: b.id, datei: datei('laut', b.id), ab: i + 1,
     sprechtext: `/${b.id}/ ${b.beispiel}`,
     hinweis: lautHinweis(b.id),
   }));
-  for (const s of lesbareSilben(stand).sort((a, b) => a.ab - b.ab || a.text.localeCompare(b.text))) {
+  for (const s of lesbareSilben(stand, optionen).sort((a, b) => a.ab - b.ab || a.text.localeCompare(b.text))) {
     liste.push({ art: 'silbe', wert: s.text, datei: datei('silbe', s.text), ab: s.ab,
       sprechtext: s.text, hinweis: 'normal, deutlich' });
   }
-  const woerter = lesbareWoerter(stand).sort((a, b) => a.ab - b.ab || a.rang - b.rang);
+  const woerter = lesbareWoerter(stand, optionen).sort((a, b) => a.ab - b.ab || a.rang - b.rang);
   for (const w of woerter) {
     liste.push({ art: 'wort', wert: w.wort, datei: datei('wort', w.wort), ab: w.ab,
       sprechtext: w.wort, hinweis: 'normal, deutlich' });

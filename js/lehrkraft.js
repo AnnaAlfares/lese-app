@@ -1,7 +1,7 @@
 // Lehrkraft-Bereich: Einstellungen wählen und als Link weitergeben.
 // Der Zustand steht nur in der Adresse dieser Seite (history.replaceState) – kein Speichern.
 
-import { BUCHSTABEN, HILFEN, leseEinstellungen, einstellungenAlsParameter } from './config.js';
+import { BUCHSTABEN, HILFEN, leseEinstellungen, einstellungenAlsParameter, position } from './config.js';
 import { lesbareWoerter, lesbareSilben, sichtwoerter } from './woerter.js';
 import { setzeTempo, sprichMitStimme, stimmeBereit } from './audio.js';
 
@@ -33,6 +33,9 @@ $('zeitmodus').addEventListener('click', () => { e.zeitmodus = !e.zeitmodus; akt
 
 // Plosive im Leseapparat
 $('plosive').addEventListener('click', () => { e.plosive = !e.plosive; aktualisiere(); });
+
+// Wörter mit ie
+$('ie').addEventListener('click', () => { e.ieErlaubt = !e.ieErlaubt; aktualisiere(); });
 
 // Sprechtempo
 $('tempo').value = e.tempo;
@@ -67,14 +70,19 @@ function aktualisiere() {
   }
   $('zeitmodus').setAttribute('aria-pressed', e.zeitmodus);
   $('plosive').setAttribute('aria-pressed', e.plosive);
+  $('ie').setAttribute('aria-pressed', e.ieErlaubt);
+  const ieStand = position('ie');
+  $('ie-hinweis').textContent = e.ieErlaubt && n < ieStand
+    ? `wirkt erst ab Stand ${ieStand} (${BUCHSTABEN[ieStand - 1].anzeige})` : '';
   $('tempo-wert').textContent = `${e.tempo} %`;
   setzeTempo(e.tempo);
 
   // Vorschau: was ist mit diesem Stand lesbar?
-  const woerter = lesbareWoerter(n);
-  const silben = lesbareSilben(n);
+  const optionen = { ieErlaubt: e.ieErlaubt };
+  const woerter = lesbareWoerter(n, optionen);
+  const silben = lesbareSilben(n, optionen);
   const neue = woerter.filter(w => w.neu).length;
-  const sicht = sichtwoerter(n).filter(x => x.lesbar);
+  const sicht = sichtwoerter(n, optionen).filter(x => x.lesbar);
   const beispiele = woerter.slice(0, 14)
     .map(w => w.neu ? `<span class="neu">${w.wort}</span>` : w.wort).join(', ');
   $('vorschau').innerHTML = `Stand ${n} von ${BUCHSTABEN.length}, zuletzt <b>${BUCHSTABEN[n - 1].anzeige}</b>: `

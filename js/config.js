@@ -60,6 +60,21 @@ export const BUCHSTABEN = Object.freeze([
 
 export const ANZAHL_BUCHSTABEN = BUCHSTABEN.length; // 41
 
+// Nicht-Basisgrapheme: Grapheme, die nicht die häufigste Schreibung ihres Lautes sind, sondern eine
+// orthographische Besonderheit (Rechtschreibung, nicht alphabetische Lesephase). Silben und Wörter
+// mit ihnen werden in woerter.js aussortiert. Quelle: NRW-Handreichung „Lesekompetenz gezielt fördern“,
+// S. 70 (v, ß, ie, c als orthographische Besonderheiten) und S. 98 (Begriff Basisgraphem).
+//   v  für /f/ (Basis: f) bzw. /w/ (Basis: w)     c  für /k/ (Basis: k)
+//   y  für /ü/ bzw. /i/ (Basis: ü, i)              ß  für /s/ nach langem Vokal (Basis: s)
+//   ie für langes /i/ – laut S. 98 statistisch eigentlich Basisgraphem, laut S. 70 Besonderheit.
+//      Deshalb umschaltbar: Standard aussortiert; mit „Wörter mit ie erlauben“ (ie=1) ab Stand 25 erlaubt.
+// Die Buchstaben selbst bleiben in der Reihenfolge und können als Buchstaben geübt werden.
+export const NICHT_BASISGRAPHEME = Object.freeze(new Set(['v', 'c', 'y', 'ß', 'ie']));
+
+// Qu steht im Deutschen nur vor bestimmten Vokalen (Qualle, Quelle, Quiz, Quote, quälen).
+// „quu“, „queu“, „quau“ usw. gibt es nicht – solche Silben werden aussortiert.
+export const VOKALE_NACH_QU = Object.freeze(new Set(['a', 'e', 'i', 'o', 'ä', 'ie'])); // ie: quieken
+
 /** Graphem-Objekt zu einer id ('sch', 'o', …) oder undefined. */
 export function graphem(id) {
   return BUCHSTABEN.find(b => b.id === id);
@@ -110,12 +125,13 @@ export const STUFEN = Object.freeze([
 // ---------------------------------------------------------------------------
 // Einstellungen der Lehrkraft – nur als URL-Parameter
 // ---------------------------------------------------------------------------
-// Beispiel: index.html?b=12&h=bfi&z=1&t=80&p=0
+// Beispiel: index.html?b=12&h=bfi&z=1&t=80&p=0&ie=0
 //   b  Buchstabenstand (1–41): so viele Grapheme der Reihenfolge sind eingeführt
 //   h  Hilfen als Kürzel (siehe HILFEN), „0“ = keine Hilfen
 //   z  Zeitmodus 1 = an, 0 = aus (Standard: aus – die Lehrkraft schaltet ihn ein)
 //   t  Sprechtempo in Prozent (50–150)
 //   p  Plosive (t, k, p …) im Leseapparat: 1 = ja, 0 = nein (Standard: nein, nur dehnbare Laute)
+//   ie Wörter und Silben mit ie erlauben: 1 = ja, 0 = nein (Standard: nein; wirkt erst ab Stand 25)
 
 export const HILFEN = Object.freeze([
   { id: 'boegen',   kuerzel: 'b', titel: 'Silbenbögen' },
@@ -131,6 +147,7 @@ export const STANDARD = Object.freeze({
   zeitmodus: false,                            // Lehrkraft schaltet ein
   tempo: 80,
   plosive: false,                              // Leseapparat: nur dehnbare Laute
+  ieErlaubt: false,                            // Silben/Wörter mit ie aussortiert
 });
 
 const begrenze = (zahl, min, max, ersatz) =>
@@ -144,6 +161,7 @@ export function leseEinstellungen(query = globalThis.location?.search ?? '') {
     zeitmodus: p.has('z') ? p.get('z') !== '0' : STANDARD.zeitmodus,
     tempo: begrenze(parseInt(p.get('t'), 10), 50, 150, STANDARD.tempo),
     plosive: p.has('p') ? p.get('p') === '1' : STANDARD.plosive,
+    ieErlaubt: p.has('ie') ? p.get('ie') === '1' : STANDARD.ieErlaubt,
     hilfen: {},
   };
   const h = p.get('h');
@@ -156,7 +174,8 @@ export function leseEinstellungen(query = globalThis.location?.search ?? '') {
 /** Baut aus Einstellungen den Query-String (ohne „?“). */
 export function einstellungenAlsParameter(e) {
   const h = HILFEN.filter(hilfe => e.hilfen[hilfe.id]).map(hilfe => hilfe.kuerzel).join('') || '0';
-  return new URLSearchParams({ b: e.stand, h, z: e.zeitmodus ? 1 : 0, t: e.tempo, p: e.plosive ? 1 : 0 })
+  return new URLSearchParams({ b: e.stand, h, z: e.zeitmodus ? 1 : 0, t: e.tempo, p: e.plosive ? 1 : 0,
+    ie: e.ieErlaubt ? 1 : 0 })
     .toString();
 }
 

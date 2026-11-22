@@ -20,6 +20,15 @@ import { graphem } from '../config.js';
 import { lesbareSilben, lesbareWoerter, zerlege, waehle } from '../woerter.js';
 import { sprichSilbe, sprichWort, sprichAnsage, stoppe } from '../audio.js';
 import { ladeLaut, halteLaut, weckeAudio } from '../haltelaut.js';
+import { zaehle } from '../sterne.js';
+import { lobe, feiereStern } from '../belohnung.js';
+import { MAX_STERNE } from '../bildercode.js';
+
+const STUFE = 3; // Rutschen gehört zu Stufe 3 (Laute verbinden): zählt für deren Sterne
+
+// LOB: VORLÄUFIG nur am Rundenende (Annas Entscheidung zur Häufigkeit steht noch aus).
+// true = zusätzlich nach jeder gelesenen Silbe bzw. jedem Wort loben.
+const LOB_JE_AUFGABE = false;
 
 // ---------------------------------------------------------------------------
 // Auswahl des Lesestoffs (Wörter und Silben kommen aus woerter.js)
@@ -134,17 +143,6 @@ function ladeCss() {
   document.head.append(link);
 }
 
-/**
- * Sterne für den Spielstand (Bildercode) nach einer geschafften Runde.
- * NOCH NICHT ENTSCHIEDEN, wie viele Sterne eine Runde bringt – deshalb wird zustand.sterne
- * vorerst nicht verändert. Hier später die Regel eintragen (Stufe 3 = zustand.sterne[2]).
- */
-// Regel (Anna): 10 gelesene Einheiten = 1 Stern, ein Zähler je Stufe über alle Module hinweg.
-// Gezählt wird je Aufgabe in fertig() (siehe „STERNE:“), nicht hier am Rundenende.
-function vergibSterne(zustand, teil, anzahlAufgaben) { // eslint-disable-line no-unused-vars
-  // absichtlich leer
-}
-
 export function starte(wurzel, { einstellungen, zustand, zurueck } = {}) {
   ladeCss();
   const stand = einstellungen.stand;
@@ -188,11 +186,11 @@ export function starte(wurzel, { einstellungen, zustand, zurueck } = {}) {
       aufraeumen();
       const aufgabe = aufgaben[nr];
       const n = aufgabe.silben.length;
-      const sterne = aufgaben.map((_, i) =>
-        `<span class="stern${i < nr ? ' voll' : ''}">${STERN}</span>`).join('');
+      // Fortschritt der Runde als Punkte (keine Sterne – Sterne gibt es nur für die Stufe, siehe sterne.js)
+      const punkte = aufgaben.map((_, i) => `<span class="punkt${i < nr ? ' voll' : ''}"></span>`).join('');
       wurzel.innerHTML = `
         <div class="rutschen" style="--anzahl:${n}">
-          <div class="rutschen-leiste"><div class="sterne">${sterne}</div></div>
+          <div class="rutschen-leiste"><div class="punkte">${punkte}</div></div>
           <div class="bahnen">
             ${aufgabe.silben.map((s, i) => `<div class="rutsche${i === 0 ? ' dran' : ''}">${svgRutsche(s, farbe(i))}</div>`).join('')}
           </div>
@@ -229,19 +227,21 @@ export function starte(wurzel, { einstellungen, zustand, zurueck } = {}) {
         if (!nochAktuell()) return;
         // Jetzt liest das Kind selbst: Silbe/Wort groß zeigen, dann „weiter“
         el.classList.add('geschafft');
-        // STERNE: Hier ist eine Einheit gelesen (Silbe bzw. Wort, selbst gerutscht) – sobald js/sterne.js
-        // (Thread 2) da ist, hier den Zähler der Stufe 3 um 1 erhöhen. Bis dahin wird nichts gezählt.
-        if (nr === 0) sprichAnsage('rutschen-jetzt-du');
+        // STERNE: Eine Einheit ist gelesen (Silbe bzw. Wort, selbst gerutscht) → zentraler Zähler
+        if (zustand && zaehle(zustand, STUFE)) feiereStern(wurzel);
+        else if (LOB_JE_AUFGABE) lobe(wurzel);
+        else if (nr === 0) sprichAnsage('rutschen-jetzt-du');
       }
     }
 
     function zeigeEnde() {
       aufraeumen();
-      vergibSterne(zustand, teil, aufgaben.length);
       wurzel.innerHTML = `
         <div class="rutschen">
           <div class="ende">
-            <div class="sterne gross">${aufgaben.map(() => `<span class="stern voll">${STERN}</span>`).join('')}</div>
+            ${zustand?.sterne ? `<div class="sterne gross" aria-label="Sterne in Stufe ${STUFE}">${
+              Array.from({ length: MAX_STERNE }, (_, i) =>
+                `<span class="stern${i < zustand.sterne[STUFE - 1] ? ' voll' : ''}">${STERN}</span>`).join('')}</div>` : ''}
             <div class="zeile-knoepfe">
               <button class="nochmal-runde" aria-label="Noch eine Runde">${NOCHMAL}</button>
               <button class="zur-auswahl" aria-label="Silben oder Wörter wählen">${symbol(1, '')}${symbol(2, '')}</button>
@@ -249,7 +249,7 @@ export function starte(wurzel, { einstellungen, zustand, zurueck } = {}) {
             </div>
           </div>
         </div>`;
-      sprichAnsage('rutschen-geschafft');
+      lobe(wurzel); // LOB am Rundenende (siehe LOB_JE_AUFGABE)
       wurzel.querySelector('.nochmal-runde').onclick = () => starteRunde(teil);
       wurzel.querySelector('.zur-auswahl').onclick = zeigeAuswahl;
       wurzel.querySelector('.fertig-knopf')?.addEventListener('click', () => { schliessen(); zurueck(); });

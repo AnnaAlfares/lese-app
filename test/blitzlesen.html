@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Testseite – Blitzlesen</title>
+  <link rel="stylesheet" href="../css/app.css">
+  <!-- Nur für die Entwicklung: zeigt den Wortvorrat des Blitzlesens je Buchstabenstand und
+       mit ?ablauf=… einen automatisch durchgeklickten Zustand (für Bildschirmfotos).
+       Einstellungen wie in der App: ?b=12&h=bfi&z=1 -->
+  <style>
+    .liste { font-size: 20px; letter-spacing: 0; }
+    .liste table { border-collapse: collapse; background: #fff; width: 100%; }
+    .liste th, .liste td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; vertical-align: top; }
+    .liste .bild { width: 48px; height: 48px; object-fit: contain; font-size: 40px; line-height: 1; display: inline-block; }
+    .liste .w { display: inline-flex; align-items: center; gap: 4px; margin: 2px 10px 2px 0; }
+    .liste .neu { background: var(--neu); }
+    #fehler { color: #b00; font-size: 18px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <main id="app"></main>
+  <pre id="fehler"></pre>
+  <script type="module">
+    import { leseEinstellungen, BUCHSTABEN, mitEinstellungen } from '../js/config.js';
+    import { bildHtml, woerterMitBild } from '../js/bilder.js';
+    import { aktiviereSprechknoepfe } from '../js/audio.js';
+    import { starte, _intern } from '../js/module/blitzlesen.js';
+
+    addEventListener('error', ev => { document.getElementById('fehler').textContent += ev.message + '\n'; });
+    addEventListener('unhandledrejection', ev => { document.getElementById('fehler').textContent += ev.reason + '\n'; });
+
+    const p = new URLSearchParams(location.search);
+    const app = document.getElementById('app');
+    const e = leseEinstellungen();
+    const ablauf = p.get('ablauf');
+
+    if (!ablauf) {
+      // Übersicht: Wortvorrat je Buchstabenstand (mit den aktuellen Hilfen)
+      let zeilen = '';
+      for (let n = 1; n <= BUCHSTABEN.length; n++) {
+        const m = _intern.baueVorrat({ ...e, stand: n });
+        const zelle = art => m.vorrat.filter(v => v.art === art).map(v =>
+          `<span class="w${v.neu ? ' neu' : ''}">${art === 'bild' ? bildHtml(v.wort) : ''}${v.wort}</span>`).join('');
+        zeilen += `<tr><td>${n} (${BUCHSTABEN[n - 1].anzeige})</td><td>${m.vorrat.length}</td>
+          <td>${zelle('bild')}</td><td>${zelle('wort')}</td></tr>`;
+      }
+      app.innerHTML = `<div class="liste">
+        <h1>Blitzlesen: Wortvorrat je Buchstabenstand</h1>
+        <p>Hilfe „Bilder“ ist ${e.hilfen.bilder ? 'an' : 'aus'}. Gelb = mit dem zuletzt eingeführten Buchstaben (kommt häufiger).
+          Wörter mit Bild: ${woerterMitBild().length}. <a href="${mitEinstellungen('../index.html', e)}">Zur App</a></p>
+        <table><thead><tr><th>Stand</th><th>Anzahl</th><th>mit Bild (Auswahl aus 3 Bildern)</th>
+          <th>ohne Bild (Auswahl aus 3 Wörtern)</th></tr></thead><tbody>${zeilen}</tbody></table></div>`;
+    } else {
+      // Automatischer Ablauf für Bildschirmfotos: start | blitz | wahl | richtig | falsch | ende | minute
+      app.innerHTML = '<div class="kopf"><h1>Blitzlesen</h1></div><div class="modul"></div>';
+      aktiviereSprechknoepfe(app);
+      const modul = app.querySelector('.modul');
+      const zustand = {};
+      starte(modul, { einstellungen: e, zustand });
+      const warte = ms => new Promise(ok => setTimeout(ok, ms));
+      const bis = async sel => { for (let i = 0; i < 200 && !modul.querySelector(sel); i++) await warte(50); };
+      const klick = sel => modul.querySelector(sel)?.click();
+      const karte = async richtig => {
+        await bis('.blitz-feld.leer .fragezeichen');
+        await bis('.blitz-karte');
+        [...modul.querySelectorAll('.blitz-karte')].find(k => (k.dataset.wort === gesehen) === richtig).click();
+      };
+      let gesehen = null;
+      new MutationObserver(() => {
+        const w = modul.querySelector('.blitz-feld.blitz .blitz-wort');
+        if (w) gesehen = w.textContent;
+      }).observe(modul, { subtree: true, childList: true, attributes: true });
+
+      (async () => {
+        if (ablauf === 'start') return;
+        klick(ablauf === 'minute' ? '[data-modus="minute"]' : '[data-modus="runde"]');
+        if (ablauf === 'blitz') { await bis('.blitz-feld.blitz'); document.body.dataset.fertig = 1; return; }
+        if (ablauf === 'wahl') return;
+        if (ablauf === 'richtig' || ablauf === 'falsch') { await karte(ablauf === 'richtig'); return; }
+        if (ablauf === 'ende' || ablauf === 'minute') {
+          for (let i = 0; i < 40 && !modul.querySelector('.blitz-ende'); i++) {
+            await karte(i % 4 !== 3);
+            await bis('.blitz-feld.bereit, .blitz-ende');
+          }
+        }
+      })();
+    }
+  </script>
+</body>
+</html>
