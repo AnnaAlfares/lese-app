@@ -3,13 +3,10 @@
    --A ist die Breite vom linken Fensterrand bis zum rechten Fensterrand:
    Fenster je 34 %, Abstand 32 % → Fenstermitten bei 17 % und 83 % (wie der Bogen im SVG). */
 
-:root {
+.la-apparat {
   --vokal: #d0342c;          /* Vokale farbig (rot) */
   --konsonant: #1d3f6e;
   --punkt: #f2a900;
-}
-
-.la-apparat {
   --A: min(72vw, calc((100vh - 250px) / 0.62));
   --fh: calc(var(--A) * 0.40);     /* Fensterhöhe */
   --zeile: calc(var(--A) * 0.22);  /* Höhe eines Buchstabens im Streifen */
@@ -143,6 +140,18 @@
 .la-gross[aria-pressed="true"] { background: #dcebdc; border-color: #4f8a4f; }
 .la-spricht .la-hoeren { border-color: var(--punkt); }
 
+/* ---------- Rundenzusammenfassung: zwischen den Fenstern ---------- */
+.la-mitte { grid-column: 3; grid-row: 1; align-self: stretch; position: relative; }
+.la-ergebnis {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
 /* ---------- Fortschritt (in der Knopfzeile unten) ---------- */
 .la-anleitung { font-weight: 600; }
 .la-fortschritt { margin-left: 24px; display: flex; align-items: center; gap: 20px; }
@@ -151,12 +160,6 @@
 .la-pip.la-voll { background: var(--punkt); border-color: #a87b00; }
 .la-sterne { display: flex; align-items: center; gap: 6px; font-size: 32px; }
 .la-sterne svg { width: 48px; height: 48px; }
-.la-sterne.la-neu svg { animation: la-stern 900ms ease-out; }
-@keyframes la-stern {
-  0% { transform: scale(0.4) rotate(-30deg); }
-  60% { transform: scale(1.4) rotate(10deg); }
-  100% { transform: scale(1) rotate(0); }
-}
 
 .la-hinweis { font-size: 28px; max-width: 900px; }
 

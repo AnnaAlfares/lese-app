@@ -20,15 +20,17 @@
 
 import { BUCHSTABEN, GEWICHT_NEUER_BUCHSTABE } from '../config.js';
 import { sprichLaut, sprichSilbe, stoppe } from '../audio.js';
-import { zaehle, nochBisStern, EINHEITEN_JE_STERN } from '../sterne.js';
-import { lobe, feiereStern } from '../belohnung.js';
+import { starteRunde, nochBisStern, EINHEITEN_JE_STERN } from '../sterne.js';
+import { lobe, fasseSterneZusammen } from '../belohnung.js';
 
 const STUFE = 3; // Leseapparat gehört zu Stufe 3 „Laute verbinden“
 
-// Lob (Entscheidung Anna): zur Hälfte der Runde und am Rundenende.
-// Eine Runde = so viele selbst gelesene Silben. Zum Ändern nur hier und in lobZeitpunkt() anpassen.
+// Runde (Entscheidung Anna): Sterne werden während der Übung still gezählt und am Rundenende
+// ruhig zusammengefasst (fasseSterneZusammen; bei 0 neuen Sternen lobt die Funktion selbst).
+// Eine Runde = so viele selbst gelesene Silben.
 const SILBEN_JE_RUNDE = 10;
-const LOB_NACH = [Math.ceil(SILBEN_JE_RUNDE / 2), SILBEN_JE_RUNDE]; // nach 5 und nach 10 Silben
+// VORLÄUFIG (Entscheidung steht aus): kurzes Lob zur Halbzeit der Runde. false = abgeschaltet.
+const LOB_ZUR_HALBZEIT = true;
 
 // Geometrie des Bogens (SVG-Koordinaten, viewBox 0 0 1000 200).
 // Die Fenstermitten liegen bei 17 % und 83 % der Breite (siehe css/leseapparat.css).
@@ -192,6 +194,9 @@ export function starte(behaelter, { einstellungen, zustand } = {}) {
   const grossKnopf = apparat.querySelector('.la-gross');
   const fortschritt = apparat.querySelector('.la-fortschritt');
 
+  // Runde für die Sterne (zählt still in zustand, Zusammenfassung am Rundenende)
+  let runde = starteRunde(zustand, STUFE);
+
   // Zustand nur im Arbeitsspeicher
   const s = {
     streifen: {
@@ -203,7 +208,9 @@ export function starte(behaelter, { einstellungen, zustand } = {}) {
     t: 0,               // Position des Punkts auf dem Bogen (0 … 1)
     vorgemacht: false,  // wurde die aktuelle Silbe schon vorgesprochen/gezeigt?
     gezaehlt: false,    // hat das Kind die aktuelle Silbe schon selbst gelesen?
-    runde: 0,           // selbst gelesene Silben in der laufenden Runde (für das Lob)
+    anzahl: 0,          // selbst gelesene Silben in der laufenden Runde
+    offen: null,        // Zahl neuer Sterne einer beendeten Runde, die noch zusammengefasst werden muss
+    ergebnis: null,     // Element mit der Zusammenfassung (wird entfernt, sobald das Kind weitermacht)
     token: 0,           // zum Abbrechen laufender Abläufe
     rahmen: 0,          // requestAnimationFrame-Nummer
     zeitgeber: 0,
@@ -256,13 +263,13 @@ export function starte(behaelter, { einstellungen, zustand } = {}) {
   }
 
   /** Punkte = Fortschritt bis zum nächsten Stern (zentraler Zähler, zählt über Module weiter). */
-  function zeichneFortschritt(neuerStern = false) {
+  function zeichneFortschritt() {
     const voll = EINHEITEN_JE_STERN - nochBisStern(zustand, STUFE);
     const sterne = zustand.sterne?.[STUFE - 1] ?? 0;
     const punkte = Array.from({ length: EINHEITEN_JE_STERN },
       (_, i) => `<span class="la-pip${i < voll ? ' la-voll' : ''}"></span>`).join('');
     fortschritt.innerHTML = `<span class="la-pips">${punkte}</span>
-      <span class="la-sterne${neuerStern ? ' la-neu' : ''}">${STERN}<span>${sterne}</span></span>`;
+      <span class="la-sterne">${STERN}<span>${sterne}</span></span>`;
   }
 
   // ---------- Abläufe ----------
@@ -272,6 +279,9 @@ export function starte(behaelter, { einstellungen, zustand } = {}) {
     clearTimeout(s.zeitgeber);
     stoppe();
     punkt.classList.remove('la-wink');
+    // Das Kind macht weiter: Zusammenfassung ausblenden; fasseSterneZusammen bricht dann still ab
+    s.ergebnis?.remove();
+    s.ergebnis = null;
   }
 
   const warte = ms => new Promise(r => { s.zeitgeber = setTimeout(r, ms); });
@@ -324,6 +334,7 @@ export function starte(behaelter, { einstellungen, zustand } = {}) {
     await bewege(1, 0, 400, token);
     if (token !== s.token) return;
     punkt.classList.add('la-wink');
+    ruhigerMoment(false); // ggf. aufgeschobene Rundenzusammenfassung
   }
 
   /** Neue Kombination: alles zurücksetzen, im Ablauf „zuerst hören“ automatisch vormachen. */
@@ -349,29 +360,48 @@ export function starte(behaelter, { einstellungen, zustand } = {}) {
     setzePunkt(1);
     markiere(null);
     zeichneSilbe(true);
-    let neuerStern = false, lob = false;
+    let halbzeit = false;
     if (!s.gezaehlt) {
-      // zählt nur, wenn das Kind den Punkt selbst über den Bogen gezogen hat, je Silbe einmal
+      // zählt nur, wenn das Kind den Punkt selbst über den Bogen gezogen hat, je Silbe einmal; still
       s.gezaehlt = true;
-      neuerStern = zaehle(zustand, STUFE) > 0;
-      s.runde++;
-      lob = lobZeitpunkt(s.runde);
-      if (s.runde >= SILBEN_JE_RUNDE) s.runde = 0;
-      zeichneFortschritt(neuerStern);
+      runde.zaehle();
+      s.anzahl++;
+      halbzeit = LOB_ZUR_HALBZEIT && s.anzahl === Math.ceil(SILBEN_JE_RUNDE / 2);
+      if (s.anzahl >= SILBEN_JE_RUNDE) {
+        // Runde zu Ende: Ergebnis merken, sofort neue Runde beginnen
+        s.offen = runde.neu;
+        runde = starteRunde(zustand, STUFE);
+        s.anzahl = 0;
+      }
+      zeichneFortschritt();
     }
-    // Kontrolle bzw. Bestätigung: die Silbe einmal hören, danach Stern bzw. Lob
+    // Kontrolle bzw. Bestätigung: die Silbe einmal hören, danach Lob bzw. Zusammenfassung
     await sprichSilbe(silbe());
-    // Hat das Kind schon weitergewischt, nur zeigen und nicht sprechen (sonst wird das Vormachen unterbrochen)
-    const still = token !== s.token ? { ansage: false } : {};
-    if (neuerStern) feiereStern(behaelter, still);
-    else if (lob) lobe(behaelter, still); // fällt Lob mit neuem Stern zusammen, nur den Stern feiern
-    if (token !== s.token) return;
+    if (token !== s.token) {
+      // Das Kind hat schon weitergemacht: nichts sprechen (Vormachen/Lesen nicht unterbrechen).
+      // Halbzeit-Lob nur still zeigen; die Zusammenfassung kommt im nächsten ruhigen Moment.
+      if (halbzeit) lobe(behaelter, { ansage: false });
+      return;
+    }
     s.vorgemacht = true;
+    ruhigerMoment(halbzeit);
   }
 
-  /** Wird nach dieser Silbe der Runde gelobt? (Hälfte und Ende der Runde) */
-  function lobZeitpunkt(silbeDerRunde) {
-    return LOB_NACH.includes(silbeDerRunde);
+  /**
+   * Ruhiger Moment (nach der gelesenen Silbe oder nach dem Vormachen):
+   * zuerst eine offene Rundenzusammenfassung, sonst ggf. das Halbzeit-Lob.
+   */
+  function ruhigerMoment(halbzeitLob) {
+    if (s.offen !== null) {
+      const neu = s.offen;
+      s.offen = null;
+      s.ergebnis = document.createElement('div');
+      s.ergebnis.className = 'la-ergebnis';
+      apparat.querySelector('.la-mitte').append(s.ergebnis);
+      fasseSterneZusammen(s.ergebnis, neu);
+    } else if (halbzeitLob) {
+      lobe(behaelter);
+    }
   }
 
   // ---------- Streifen wischen ----------
