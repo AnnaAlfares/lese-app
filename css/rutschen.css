@@ -28,7 +28,7 @@ body:has(.rutschen) footer { display: none; }
 /* Rutschen */
 .bahnen { flex: 1; display: flex; justify-content: center; align-items: center; gap: 8px; }
 .rutsche { transition: opacity 0.3s; }
-.rutsche:not(.dran):not(.fertig) { opacity: 0.35; }
+.rutsche:not(.dran):not(.gerutscht) { opacity: 0.35; }
 .rutsche-bild {
   display: block;
   height: auto;
@@ -48,7 +48,7 @@ body:has(.rutschen) footer { display: none; }
 .rutsche-bild.klingt-k .haltespur { opacity: 0.55; }
 .rutsche-bild .landung { fill: #e9e2d3; }
 .rutsche-bild .kugel { fill: #fff; stroke: var(--farbe); stroke-width: 8; }
-.rutsche.dran .rutsche-bild:not(.aktiv):not(.fertig) .kugel { animation: wippen 1.6s ease-in-out infinite; }
+.rutsche.dran .rutsche-bild:not(.aktiv):not(.gerutscht) .kugel { animation: wippen 1.6s ease-in-out infinite; }
 .rutsche-bild.aktiv .kugel { fill: var(--neu); }
 @keyframes wippen { 50% { stroke-width: 16; } }
 

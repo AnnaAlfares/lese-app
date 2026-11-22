@@ -219,7 +219,7 @@ export function starte(wurzel, { einstellungen, zustand, zurueck } = {}) {
       const nochAktuell = () => !beendet && el.isConnected;
 
       async function fertig(i) {
-        rutschen[i].classList.replace('dran', 'fertig');
+        rutschen[i].classList.replace('dran', 'gerutscht');
         await sprichSilbe(aufgabe.silben[i].text);
         if (!nochAktuell()) return;
         if (i + 1 < n) { rutschen[i + 1].classList.add('dran'); return; }
@@ -336,7 +336,7 @@ function macheRutschbar(rutsche, silbe, beiFertig) {
     rutsche_zu(e);
     if (anteil === vorher) return; // Finger bewegt sich nicht vorwärts → zählt als Stillhalten
     zeichne();
-    if (anteil >= 0.97) { anteil = 1; zeichne(); ende(); fertig = true; svg.classList.add('fertig'); beiFertig(); return; }
+    if (anteil >= 0.97) { anteil = 1; zeichne(); ende(); fertig = true; svg.classList.add('gerutscht'); beiFertig(); return; }
     klinge(lautHier());
     clearTimeout(stillZeit);
     stillZeit = setTimeout(() => klinge(null), STILL_MS);
