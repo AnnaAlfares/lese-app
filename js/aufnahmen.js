@@ -41,6 +41,9 @@ const LOB = {
   'lob-super': 'Super!',
   'lob-prima': 'Prima!',
   'lob-klasse': 'Klasse!',
+  'lob-weiter-so': 'Weiter so!',
+  'lob-uebung': 'Übung macht den Meister!',
+  'lob-besser': 'Du wirst immer besser!',
 };
 export const LOB_ANSAGEN = Object.freeze(Object.keys(LOB));
 

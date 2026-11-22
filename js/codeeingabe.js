@@ -27,7 +27,7 @@ const STERN = `<svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3
 
 /** Sterne einer Stufe: 7 Plätze, davon n gefüllt (auch für die Stufen-Kacheln in app.js). */
 export function sterneHtml(n) {
-  return `<span class="sterne" role="img" aria-label="${n} von ${MAX_STERNE} Sternen">${
+  return `<span class="sterne-leiste" role="img" aria-label="${n} von ${MAX_STERNE} Sternen">${
     Array.from({ length: MAX_STERNE }, (_, i) => `<span class="stern${i < n ? ' voll' : ''}">${STERN}</span>`).join('')
   }</span>`;
 }
@@ -146,27 +146,27 @@ export function zeigeAbschluss(ziel, sterne, { zurueck, ende }) {
   let lauf = 0; // erhöht sich bei jedem neuen Vorlesen; alte Durchgänge brechen dann ab
 
   ziel.innerHTML = `
-    <div class="abschluss">
+    <div class="code-abschluss">
       <div class="kopf">
         <button class="zurueck" aria-label="Weiter üben">${PFEIL}</button>
-        <div class="abschluss-sterne">
-          ${STUFEN.map((s, i) => `<span class="stufen-sterne" style="background:${s.farbe}">
+        <div class="code-abschluss-sterne">
+          ${STUFEN.map((s, i) => `<span class="code-stufe-sterne" style="background:${s.farbe}">
             <span class="nr">${s.nr}</span>${sterneHtml(sterne[i] ?? 0)}</span>`).join('')}
         </div>
       </div>
-      <div class="abschluss-code">
+      <div class="code-abschluss-code">
         ${code.map((nr, i) => `<button class="code-bild gross" data-stelle="${i}" aria-label="${nr} ${bild(nr).wort}">
           ${bildHtml(nr)}</button>`).join('')}
       </div>
-      <div class="abschluss-knoepfe">
-        <button class="vorlesen" aria-label="Noch einmal vorlesen">${LAUTSPRECHER}</button>
-        <button class="ende" disabled>${HAKEN}<span>Ende</span></button>
+      <div class="code-abschluss-knoepfe">
+        <button class="code-vorlesen" aria-label="Noch einmal vorlesen">${LAUTSPRECHER}</button>
+        <button class="code-ende" disabled>${HAKEN}<span>Ende</span></button>
       </div>
     </div>`;
 
-  const wurzel = ziel.querySelector('.abschluss');
-  const kacheln = [...wurzel.querySelectorAll('.abschluss-code .code-bild')];
-  const endeKnopf = wurzel.querySelector('.ende');
+  const wurzel = ziel.querySelector('.code-abschluss');
+  const kacheln = [...wurzel.querySelectorAll('.code-abschluss-code .code-bild')];
+  const endeKnopf = wurzel.querySelector('.code-ende');
   const markiere = i => kacheln.forEach((k, j) => k.classList.toggle('spricht', i === j));
 
   async function liesVor() {
@@ -191,11 +191,11 @@ export function zeigeAbschluss(ziel, sterne, { zurueck, ende }) {
       const i = Number(kachel.dataset.stelle);
       markiere(i);
       sprichAnsage(`zahl-${code[i]}`);
-    } else if (e.target.closest('.vorlesen')) {
+    } else if (e.target.closest('.code-vorlesen')) {
       liesVor();
     } else if (e.target.closest('.zurueck')) {
       lauf++; stoppe(); zurueck();
-    } else if (e.target.closest('.ende') && !endeKnopf.disabled) {
+    } else if (e.target.closest('.code-ende') && !endeKnopf.disabled) {
       lauf++; stoppe(); ende();
     }
   });

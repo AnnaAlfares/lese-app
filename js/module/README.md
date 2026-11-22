@@ -88,7 +88,7 @@ Allgemeine Ansagen für alle Module (in `../aufnahmen.js`, mit `sprichAnsage(id)
 
 | id | Text |
 |----|------|
-| `lob-toll`, `lob-gut`, `lob-super`, `lob-prima`, `lob-klasse` | Toll gemacht! · Das hast du gut gemacht! · Super! · Prima! · Klasse! |
+| `lob-toll`, `lob-gut`, `lob-super`, `lob-prima`, `lob-klasse`, `lob-weiter-so`, `lob-uebung`, `lob-besser` | Toll gemacht! · Das hast du gut gemacht! · Super! · Prima! · Klasse! · Weiter so! · Übung macht den Meister! · Du wirst immer besser! |
 | `neuer-stern` | Neuer Stern! |
 | `geschafft` | Geschafft! |
 | `neuer-rekord` | Neuer Rekord! |

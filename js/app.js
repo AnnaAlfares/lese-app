@@ -52,7 +52,7 @@ function zeigeEnde() {
 function zeigeStart() {
   app.innerHTML = `
     <div class="kopf"><h1>Lese-App</h1>
-      <button class="fertig" aria-label="Fertig">${HAKEN}<span>Fertig</span></button></div>
+      <button class="code-fertig" aria-label="Fertig">${HAKEN}<span>Fertig</span></button></div>
     <div class="kacheln">
       ${STUFEN.map(s => `
         <button class="kachel" data-stufe="${s.nr}" style="background:${s.farbe}">
@@ -141,11 +141,11 @@ app.addEventListener('click', e => {
     zeigeStufe(stufe.nr);
     return;
   }
-  if (e.target.closest('.fertig')) {
+  if (e.target.closest('.code-fertig')) {
     zeigeEnde();
     return;
   }
-  if (e.target.closest('.zurueck') && !e.target.closest('.abschluss')) {
+  if (e.target.closest('.zurueck') && !e.target.closest('.code-abschluss')) {
     sprichAnsage('zurueck');
     if (aktuelleStufe) {
       verlasseModul();
