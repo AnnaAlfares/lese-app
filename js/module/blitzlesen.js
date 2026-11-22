@@ -193,6 +193,7 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
     r = {
       modus, richtig: 0, gezeigt: 0, phase: 'bereit', aufgabe: null, angesagt: new Set(),
       liste: modus === 'runde' ? rundenListe(material.vorrat) : null, zeitUm: false,
+      beginn: performance.now(), halbGelobt: false,
     };
     behaelter.innerHTML = `
       <div class="blitz-runde">
@@ -292,9 +293,19 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
     const kurz = r.modus === 'minute';
     await sprichUndWarte(sprichWort(aufgabe.wort), 2500);
     if (meinLauf !== lauf) return;
-    // Neuer Stern der Stufe (alle 10 richtigen Antworten): erst nach dem Wort, damit sich die Töne nicht abschneiden
+    // Belohnung erst nach dem vorgesprochenen Wort, damit sie das Vorsprechen nicht unterbricht:
+    // - neuer Stern der Stufe (alle 10 richtigen Antworten) → Stern feiern
+    // - Hälfte der Runde geschafft (5 von 10 Wörtern bzw. 30 Sekunden) → kurz loben (Entscheidung Anna);
+    //   fällt beides zusammen, wird nur der Stern gefeiert
+    const haelfte = !r.halbGelobt && (r.modus === 'runde'
+      ? r.gezeigt >= RUNDE / 2
+      : performance.now() - r.beginn >= MINUTE / 2);
+    if (haelfte) r.halbGelobt = true;
     if (neuerStern) {
       await sprichUndWarte(feiereStern(behaelter), 2500);
+      if (meinLauf !== lauf) return;
+    } else if (haelfte) {
+      await sprichUndWarte(lobe(behaelter), 2500);
       if (meinLauf !== lauf) return;
     }
     await warte(richtig ? (kurz ? 200 : 500) : (kurz ? 800 : 1500));
@@ -346,7 +357,7 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
       </div>`;
     r = null;
     // Lob (Haken) mit „Geschafft!“ bzw. „Neuer Rekord!“, dann die Zahl (Aufnahmen gibt es für 1–16).
-    // VORLÄUFIG wird nur am Rundenende gelobt – die Entscheidung zur Lob-Häufigkeit steht noch aus.
+    // Gelobt wird zur Rundenhälfte (siehe waehleAntwort) und hier am Rundenende.
     const meinLauf = lauf;
     (async () => {
       await sprichUndWarte(lobe(behaelter, { ansage: rekord ? 'neuer-rekord' : 'geschafft' }), 2500);
