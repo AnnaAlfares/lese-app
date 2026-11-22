@@ -46,13 +46,20 @@ Es zählen nur richtig bzw. wirklich gelesene Einheiten – das prüft das Modul
 (Blitzlesen: nur richtige Antworten; Leseapparat: selbst über den Bogen gezogen; Rutschen: selbst
 gerutscht und gelesen; Silbenteppich: nur wenn nicht schneller als ca. 0,5 s weitergetippt).
 
-```js
-import { zaehle } from '../sterne.js';
-// zustand = das Spielstand-Objekt aus app.js (übergeben oder importiert)
+**Sterne werden während der Übung still gezählt** (Entscheidung Anna): kein Einblenden, keine Ansage
+mittendrin. Erst am Rundenende kommt eine ruhige Zusammenfassung (siehe `fasseSterneZusammen` unten).
 
-if (zaehle(zustand, 3)) zeigeNeuenStern();   // eine Einheit in Stufe 3
-zaehle(zustand, 4, 5);                         // fünf Einheiten auf einmal
+```js
+import { starteRunde } from '../sterne.js';
+
+const runde = starteRunde(zustand, 3);   // zu Beginn jeder Runde
+runde.zaehle();                          // eine gelesene Einheit, still
+runde.zaehle(5);                         // fünf auf einmal
+runde.neu                                // neue Sterne dieser Runde (für die Zusammenfassung)
 ```
+
+`starteRunde(zustand, stufe) → { neu, zaehle(anzahl = 1) }`: ruft intern `zaehle()` auf und zählt die neuen
+Sterne der Runde mit. Direkt geht es auch mit `zaehle(zustand, 3)`.
 
 `zaehle(zustand, stufe, anzahl = 1) → number`: erhöht den Zähler der Stufe (1–5), schreibt bei jedem
 vollen Zehner einen Stern in `zustand.sterne[stufe - 1]` und gibt die Zahl der **gerade neu dazugekommenen
@@ -66,16 +73,31 @@ Ein gemeinsamer, ruhiger Belohnungs-Moment (CLAUDE.md, Regel 7): kein Pop-up. Ei
 oben rechts im Modul-Bereich, verschwindet von selbst und lässt Fingertipps durch. Gestaltung: `css/belohnung.css`.
 
 ```js
-import { lobe, feiereStern } from '../belohnung.js';
-import { zaehle } from '../sterne.js';
+import { lobe, fasseSterneZusammen } from '../belohnung.js';
+import { starteRunde } from '../sterne.js';
 
-if (zaehle(zustand, 3)) feiereStern(bereich);   // neuer Stern: Stern schwebt, „Neuer Stern!“
-else lobe(bereich);                             // kurzes Lob: Haken, „Toll gemacht!“ / „Prima!“ / …
+const runde = starteRunde(zustand, 3);
+// … während der Übung nur runde.zaehle(), evtl. ein Lob zur Halbzeit: lobe(bereich)
+// Rundenende:
+fasseSterneZusammen(ergebnisBereich, runde.neu, { vorweg: neuerRekord ? ['neuer-rekord'] : [] });
 ```
+
+`fasseSterneZusammen(behaelter, anzahlNeu, { vorweg = [], danach } = {}) → Promise<boolean>`
+- zeigt die neuen Sterne als **ruhige Reihe** im Behälter (`.belohnung-sterne`, blendet Stern für Stern ein,
+  bleibt stehen, bis das Modul neu zeichnet) und spricht:
+  - 1 Stern: `sterne-einen-neuen` („Du hast in dieser Übung einen neuen Stern bekommen.“)
+  - 2–7 Sterne: `sterne-du-hast` + `zahl-n` + `sterne-neue-bekommen` („Du hast in dieser Übung … neue Sterne bekommen.“)
+  - 0 Sterne: keine Reihe, stattdessen `lobe(behaelter)`.
+- `vorweg`: Ansage-ids, die vorher gesprochen werden (z. B. `['zeit-um']`, `['neuer-rekord']`).
+- `danach`: Funktion, die aufgerufen wird, wenn alles gesprochen ist.
+- Bricht still ab (Rückgabe `false`), wenn der Behälter von der Seite verschwindet (z. B. Zurück, „Noch einmal“)
+  oder im selben Behälter eine neue Zusammenfassung startet. Sonst `true`.
+- `behaelter = null`: nur sprechen.
 
 - `lobe(behaelter, { ansage } = {}) → Promise`: grüner Haken (ca. 1,2 s) und eine Lob-Ansage. Die Lob-Ansagen
   wechseln sich ab (jede einmal, nie zweimal direkt hintereinander).
 - `feiereStern(behaelter, { ansage } = {}) → Promise`: goldener Stern (ca. 2,2 s), Ansage „Neuer Stern!“.
+  **Nicht während der Übung verwenden** (Sterne werden still gezählt); bleibt nur für Sonderfälle.
 - `behaelter`: das Element des Moduls, in dem das Zeichen erscheinen soll (bekommt bei Bedarf
   `position: relative`). `null` = nur sprechen.
 - `ansage`: eigene Ansage-id statt der Standard-Ansage, oder `false` = stumm.
@@ -90,8 +112,31 @@ Allgemeine Ansagen für alle Module (in `../aufnahmen.js`, mit `sprichAnsage(id)
 |----|------|
 | `lob-toll`, `lob-gut`, `lob-super`, `lob-prima`, `lob-klasse`, `lob-weiter-so`, `lob-uebung`, `lob-besser` | Toll gemacht! · Das hast du gut gemacht! · Super! · Prima! · Klasse! · Weiter so! · Übung macht den Meister! · Du wirst immer besser! |
 | `neuer-stern` | Neuer Stern! |
+| `sterne-du-hast`, `sterne-neue-bekommen`, `sterne-einen-neuen` | Du hast in dieser Übung · neue Sterne bekommen. · Du hast in dieser Übung einen neuen Stern bekommen. |
 | `geschafft` | Geschafft! |
 | `neuer-rekord` | Neuer Rekord! |
 | `noch-einmal` | Versuch es noch einmal. |
 
 Ausprobieren: `test/belohnung.html`.
+
+## CSS-Klassen: eigenes Präfix
+
+Jedes Modul und jeder gemeinsame Baustein benennt seine CSS-Klassen mit einem **eigenen Präfix**
+(kurz auch in CLAUDE.md, „Arbeitsweise“). Sonst wirken Regeln eines Moduls auf andere – Beispiel:
+eine Regel `.fertig svg { width: 36px }` hat in einem anderen Modul jedes Bild im „Fertig“-Bereich geschrumpft.
+
+| Baustein / Modul | Präfix | Beispiele |
+|---|---|---|
+| Bildercode (`codeeingabe.js`, `css/bildercode.css`) | `code-` | `.code-bild`, `.code-fertig`, `.code-abschluss` |
+| Belohnung (`belohnung.js`, `css/belohnung.css`) | `belohnung` | `.belohnung`, `.belohnung-sterne` |
+| Blitzlesen | `blitz-` | `.blitz-sterne`, `.blitz-ende` |
+| Silbenteppich | `st-` | `.st-ende` |
+| neues Modul | kurzes, eindeutiges Präfix | z. B. `rutsch-`, `lapp-` |
+
+Regeln:
+- Keine allgemeinen Klassennamen wie `.fertig`, `.stern`, `.sterne`, `.ende`, `.abschluss`, `.vorlesen`,
+  `.unsichtbar` in Modul-CSS – auch nicht mit Präfix nur am Elternelement, wenn der Name auch in JS gesucht wird
+  (`closest('.fertig')` in `app.js` reagierte früher auf jedes `.fertig` eines Moduls).
+- Gemeinsame Klassen aus `app.css` (`.kopf`, `.kachel`, `.zurueck`, `.lautsprecher`, …) darf ein Modul benutzen,
+  aber nur innerhalb des eigenen Bereichs umgestalten: `.blitz-start .lautsprecher svg`, nicht `.lautsprecher svg`.
+- Selektoren in Modul-CSS beginnen mit einer Klasse des Moduls.

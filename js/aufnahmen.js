@@ -74,6 +74,10 @@ export const ANSAGEN = Object.freeze({
   // Belohnung und allgemeine Rückmeldungen für alle Module (belohnung.js)
   ...LOB,
   'neuer-stern': 'Neuer Stern!',
+  // Zusammenfassung am Rundenende (belohnung.js: fasseSterneZusammen); dazwischen zahl-2 … zahl-7
+  'sterne-du-hast': 'Du hast in dieser Übung',
+  'sterne-neue-bekommen': 'neue Sterne bekommen.',
+  'sterne-einen-neuen': 'Du hast in dieser Übung einen neuen Stern bekommen.',
   'geschafft': 'Geschafft!',
   'neuer-rekord': 'Neuer Rekord!',
   'noch-einmal': 'Versuch es noch einmal.',
