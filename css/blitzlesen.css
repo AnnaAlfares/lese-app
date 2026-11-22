@@ -33,7 +33,7 @@
   width: clamp(300px, 26vw, 420px); height: clamp(260px, 24vw, 360px);
   border-radius: 32px; background: #eadcf2; border: none; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
 }
-.blitz-modus .gross svg { width: clamp(110px, 9vw, 160px); height: clamp(110px, 9vw, 160px); display: block; }
+.blitz-modus-symbol svg { width: clamp(110px, 9vw, 160px); height: clamp(110px, 9vw, 160px); display: block; }
 .blitz-modus-text { font-size: 34px; font-weight: 600; }
 .blitz-rekord { font-size: 26px; color: #555; }
 .blitz-rekord.neu { font-size: 44px; font-weight: 700; color: #2f7d32; animation: blitz-hops 0.6s ease-out; }
@@ -59,21 +59,21 @@
 }
 .blitz-feld.blitz { border-color: #f2b600; }
 .blitz-feld.aufloesung { border-color: #9cc79c; }
-.blitz-feld .fixpunkt { width: 24px; height: 24px; border-radius: 50%; background: #999; }
-.blitz-feld .fragezeichen { font-size: 96px; color: #ccc; }
+.blitz-fixpunkt { width: 24px; height: 24px; border-radius: 50%; background: #999; }
+.blitz-fragezeichen { font-size: 96px; color: #ccc; }
 .blitz-wort {
   font-size: clamp(88px, 8vw, 140px); line-height: 1.1; letter-spacing: 0.08em;
   display: inline-flex; align-items: flex-end;
 }
-.blitz-wort .silbe { padding: 0 0.04em 0.08em; }
-.blitz-wort .silbe.blau { color: var(--silbe-blau); }
-.blitz-wort .silbe.rot { color: var(--silbe-rot); }
+.blitz-wort .blitz-silbe { padding: 0 0.04em 0.08em; }
+.blitz-wort .blitz-silbe.blau { color: var(--silbe-blau); }
+.blitz-wort .blitz-silbe.rot { color: var(--silbe-rot); }
 /* Silbenbogen unter jeder Silbe */
-.blitz-wort .silbe.bogen {
+.blitz-wort .blitz-silbe.bogen {
   border-bottom: 6px solid #888; border-radius: 0 0 50% 50% / 0 0 36px 36px; margin: 0 0.05em;
 }
-.blitz-wort .silbe.bogen.blau { border-bottom-color: var(--silbe-blau); }
-.blitz-wort .silbe.bogen.rot { border-bottom-color: var(--silbe-rot); }
+.blitz-wort .blitz-silbe.bogen.blau { border-bottom-color: var(--silbe-blau); }
+.blitz-wort .blitz-silbe.bogen.rot { border-bottom-color: var(--silbe-rot); }
 
 /* Drei Antwort-Karten */
 .blitz-karten { display: flex; gap: clamp(24px, 3vw, 56px); justify-content: center; min-height: clamp(260px, 34vh, 380px); }
@@ -112,6 +112,7 @@
 
 /* ---------- Ende ---------- */
 .blitz-ende { display: flex; flex-direction: column; align-items: center; gap: 16px; margin-top: 24px; }
+.blitz-ende-ergebnis { display: flex; flex-direction: column; align-items: center; gap: 16px; min-width: min(100%, 700px); }
 .blitz-ergebnis { font-size: 56px; margin: 0; }
 .blitz-ergebnis-text { font-size: 32px; margin: 0; color: #555; }
 .blitz-ende-knoepfe { display: flex; gap: 40px; margin-top: 24px; }

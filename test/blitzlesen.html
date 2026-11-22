@@ -63,7 +63,7 @@
       const bis = async sel => { for (let i = 0; i < 200 && !modul.querySelector(sel); i++) await warte(50); };
       const klick = sel => modul.querySelector(sel)?.click();
       const karte = async richtig => {
-        await bis('.blitz-feld.leer .fragezeichen');
+        await bis('.blitz-feld.leer .blitz-fragezeichen');
         await bis('.blitz-karte');
         [...modul.querySelectorAll('.blitz-karte')].find(k => (k.dataset.wort === gesehen) === richtig).click();
       };

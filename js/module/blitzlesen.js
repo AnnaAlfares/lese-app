@@ -10,20 +10,22 @@
 //   Hilfe „Bilder“: Auswahl aus drei geschriebenen Wörtern („Welches Wort war das?“).
 // - Ablenker sind möglichst ähnlich (gleicher Anfang oder gleiches Ende), damit das Kind das ganze Wort
 //   ansehen muss und nicht nur den ersten Buchstaben.
-// - Ohne Zeit: Runde mit 10 Wörtern, ein Stern pro richtigem Wort.
+// - Ohne Zeit: Runde mit 10 Wörtern; die Sterne-Reihe der Runde zeigt die richtigen Antworten.
 //   Zeitmodus (nur wenn im Lehrkraft-Bereich an): 1 Minute, gezählt werden richtige Wörter pro Minute,
 //   eigener Rekord nur im Arbeitsspeicher.
-// - Schnittstelle: siehe js/module/README.md. Sterne der Stufe 4 über zaehle() aus sterne.js:
-//   jede RICHTIGE Antwort ist eine Einheit (10 Einheiten = 1 Stern). Die Sterne-Reihe in der Runde
-//   zeigt nur die richtigen Antworten dieser Runde.
+// - Schnittstelle: siehe js/module/README.md. Sterne der Stufe 4 (Entscheidung Anna): während der Übung
+//   still zählen mit starteRunde() aus sterne.js – jede RICHTIGE Antwort ist eine Einheit
+//   (10 Einheiten = 1 Stern) –, am Rundenende ruhig zusammenfassen mit fasseSterneZusammen().
 
 import { lesbareWoerter, sichtwoerter, waehle } from '../woerter.js';
 import { hatBild, bildHtml, woerterMitBild } from '../bilder.js';
 import { sprichWort, sprichAnsage, stoppe } from '../audio.js';
-import { zaehle } from '../sterne.js';
-import { lobe, feiereStern } from '../belohnung.js';
+import { starteRunde as starteSternRunde } from '../sterne.js';
+import { lobe, fasseSterneZusammen } from '../belohnung.js';
 
 const STUFE = 4; // Automatisieren
+// Kurzes Lob zur Halbzeit (5 von 10 Wörtern bzw. 30 Sekunden). VORLÄUFIG an – Annas Entscheidung steht aus.
+const LOB_ZUR_HALBZEIT = true;
 
 const RUNDE = 10;                 // Wörter pro Runde ohne Zeit
 const MINUTE = 60_000;
@@ -171,12 +173,12 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
         </div>
         <div class="blitz-modi">
           <button class="blitz-modus" data-modus="runde" aria-label="${RUNDE} Wörter">
-            <span class="gross">${SVG.los}</span>
+            <span class="blitz-modus-symbol">${SVG.los}</span>
             <span class="blitz-sterne klein">${sterne(RUNDE, 0)}</span>
           </button>
           ${e.zeitmodus ? `
           <button class="blitz-modus" data-modus="minute" aria-label="1 Minute">
-            <span class="gross">${SVG.uhr}</span>
+            <span class="blitz-modus-symbol">${SVG.uhr}</span>
             <span class="blitz-modus-text">1 Minute</span>
             ${merk.rekord ? `<span class="blitz-rekord">Rekord: ${merk.rekord}</span>` : ''}
           </button>` : ''}
@@ -194,6 +196,7 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
       modus, richtig: 0, gezeigt: 0, phase: 'bereit', aufgabe: null, angesagt: new Set(),
       liste: modus === 'runde' ? rundenListe(material.vorrat) : null, zeitUm: false,
       beginn: performance.now(), halbGelobt: false,
+      sterne: starteSternRunde(zustand, STUFE), // zählt still; runde.neu = neue Sterne dieser Runde
     };
     behaelter.innerHTML = `
       <div class="blitz-runde">
@@ -218,7 +221,7 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
 
   function wortHtml(aufgabe) {
     return aufgabe.silben.map((s, i) => {
-      const k = ['silbe'];
+      const k = ['blitz-silbe'];
       if (e.hilfen.farben) k.push(i % 2 ? 'rot' : 'blau');
       if (e.hilfen.boegen) k.push('bogen');
       return `<span class="${k.join(' ')}">${s}</span>`;
@@ -238,7 +241,7 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
     // 1. Fixpunkt
     r.phase = 'bereit';
     feld.className = 'blitz-feld bereit';
-    feld.innerHTML = '<span class="fixpunkt"></span>';
+    feld.innerHTML = '<span class="blitz-fixpunkt"></span>';
     await warte(FIXPUNKT);
     if (meinLauf !== lauf) return;
 
@@ -252,7 +255,7 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
     // 3. Wort weg, drei Antworten
     r.phase = 'wahl';
     feld.className = 'blitz-feld leer';
-    feld.innerHTML = '<span class="fragezeichen">?</span>';
+    feld.innerHTML = '<span class="blitz-fragezeichen">?</span>';
     karten.className = `blitz-karten ${aufgabe.art}`;
     karten.innerHTML = auswahl(aufgabe, material).map(w => aufgabe.art === 'bild'
       ? `<div class="blitz-karte" data-wort="${w}" role="button" tabindex="0">
@@ -284,27 +287,20 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
     feld.className = 'blitz-feld aufloesung';
     feld.innerHTML = `<span class="blitz-wort">${wortHtml(aufgabe)}</span>`;
 
-    let neuerStern = false;
     if (richtig) {
       r.richtig++;
-      neuerStern = zaehle(zustand, STUFE) > 0; // nur richtige Antworten zählen für die Sterne der Stufe
+      r.sterne.zaehle(); // still: nur richtige Antworten zählen für die Sterne der Stufe
       zeigeStern();
     }
     const kurz = r.modus === 'minute';
     await sprichUndWarte(sprichWort(aufgabe.wort), 2500);
     if (meinLauf !== lauf) return;
-    // Belohnung erst nach dem vorgesprochenen Wort, damit sie das Vorsprechen nicht unterbricht:
-    // - neuer Stern der Stufe (alle 10 richtigen Antworten) → Stern feiern
-    // - Hälfte der Runde geschafft (5 von 10 Wörtern bzw. 30 Sekunden) → kurz loben (Entscheidung Anna);
-    //   fällt beides zusammen, wird nur der Stern gefeiert
-    const haelfte = !r.halbGelobt && (r.modus === 'runde'
+    // Lob zur Halbzeit – erst nach dem vorgesprochenen Wort, damit es das Vorsprechen nicht unterbricht
+    const haelfte = LOB_ZUR_HALBZEIT && !r.halbGelobt && (r.modus === 'runde'
       ? r.gezeigt >= RUNDE / 2
       : performance.now() - r.beginn >= MINUTE / 2);
-    if (haelfte) r.halbGelobt = true;
-    if (neuerStern) {
-      await sprichUndWarte(feiereStern(behaelter), 2500);
-      if (meinLauf !== lauf) return;
-    } else if (haelfte) {
+    if (haelfte) {
+      r.halbGelobt = true;
       await sprichUndWarte(lobe(behaelter), 2500);
       if (meinLauf !== lauf) return;
     }
@@ -349,20 +345,18 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
     }
     behaelter.innerHTML = `
       <div class="blitz-ende">
-        ${inhalt}
+        <div class="blitz-ende-ergebnis">${inhalt}</div>
         <div class="blitz-ende-knoepfe">
           <button class="blitz-nochmal" data-modus="${ergebnis.modus}" aria-label="Nochmal">${SVG.nochmal}</button>
           <button class="blitz-zum-start" aria-label="Blitz-Zeit und Modus wählen">${SVG.blitz}</button>
         </div>
       </div>`;
     r = null;
-    // Lob (Haken) mit „Geschafft!“ bzw. „Neuer Rekord!“, dann die Zahl (Aufnahmen gibt es für 1–16).
-    // Gelobt wird zur Rundenhälfte (siehe waehleAntwort) und hier am Rundenende.
-    const meinLauf = lauf;
-    (async () => {
-      await sprichUndWarte(lobe(behaelter, { ansage: rekord ? 'neuer-rekord' : 'geschafft' }), 2500);
-      if (meinLauf === lauf && ergebnis.richtig >= 1 && ergebnis.richtig <= 16) sprichAnsage(`zahl-${ergebnis.richtig}`);
-    })();
+    // Ruhige Zusammenfassung: „Geschafft!“ bzw. „Neuer Rekord!“, dann die neuen Sterne dieser Runde
+    // („Du hast in dieser Übung … neue Sterne bekommen.“) – bei 0 neuen Sternen lobt fasseSterneZusammen selbst.
+    // Bricht von selbst ab, wenn das Kind weitertippt (Bereich neu gezeichnet).
+    fasseSterneZusammen(behaelter.querySelector('.blitz-ende-ergebnis'), ergebnis.sterne.neu,
+      { vorweg: [rekord ? 'neuer-rekord' : 'geschafft'] });
   }
 
   // ---------- Bedienung ----------
