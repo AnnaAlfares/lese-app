@@ -24,6 +24,7 @@
     td button { font-size: 16px; min-height: 40px; min-width: 40px; padding: 2px 10px; }
     .zusammenfassung span { margin-right: 24px; }
     .hinweis-text { color: #555; }
+    .nur-ie { font-size: 14px; background: #eadcf2; color: #4a2f6b; border-radius: 6px; padding: 1px 6px; white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -58,9 +59,8 @@
     let nurFehlende = false;
     let eintraege = [];
 
-    $('modus').textContent = (leseEinstellungen().ieErlaubt
-        ? 'Wörter mit ie sind erlaubt (ie=1 in der Adresse). '
-        : 'Wörter mit ie sind aussortiert – mit ie=1 in der Adresse erscheinen sie in der Liste. ')
+    $('modus').textContent = 'Silben und Wörter mit ie stehen immer in der Liste (markiert „nur mit Schalter ie“), '
+      + 'damit sie vorsorglich aufgenommen werden können. '
       + 'Fehlt eine Laut-Aufnahme, bleibt es immer still (Lautsprecher ausgeblendet). '
       + (AUDIO.beiFehlender === 'stimme'
         ? 'Fehlt eine Silbe, ein Wort oder eine Ansage, spricht ersatzweise die Gerätestimme (config.js).'
@@ -88,7 +88,7 @@
         <td class="${e.da ? 'ok' : 'fehlt'}">${e.da ? '✓' : '✗'}</td>
         <td>${ARTEN[e.art].titel}</td>
         <td><code>${e.datei}</code></td>
-        <td>${e.sprechtext}</td>
+        <td>${e.sprechtext}${e.nurMitIe ? ' <span class="nur-ie">nur mit Schalter ie</span>' : ''}</td>
         <td class="hinweis-text">${e.hinweis}</td>
         <td>${e.ab}</td>
         <td>${e.da ? `<button data-nr="${eintraege.indexOf(e)}">▶</button>` : ''}</td>
@@ -120,7 +120,7 @@
     });
     $('kopieren').addEventListener('click', async () => {
       const text = eintraege.filter(e => !e.da)
-        .map(e => `${e.datei}\t${e.sprechtext}\t${e.hinweis}`).join('\n');
+        .map(e => `${e.datei}\t${e.sprechtext}\t${e.hinweis}${e.nurMitIe ? ' (nur mit Schalter ie)' : ''}`).join('\n');
       try {
         await navigator.clipboard.writeText(text);
         $('kopiert').textContent = 'kopiert (Tabulator-getrennt, passt in eine Tabelle)';
