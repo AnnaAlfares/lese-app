@@ -10,19 +10,23 @@
 //   Hilfe „Bilder“: Auswahl aus drei geschriebenen Wörtern („Welches Wort war das?“).
 // - Ablenker sind möglichst ähnlich (gleicher Anfang oder gleiches Ende), damit das Kind das ganze Wort
 //   ansehen muss und nicht nur den ersten Buchstaben.
-// - Ohne Zeit: Runde mit 10 Wörtern, ein Stern pro richtigem Wort.
+// - Ohne Zeit: Runde mit 10 Wörtern; die Punkte-Reihe der Runde zeigt die richtigen Antworten
+//   (Punkte statt Sterne, damit sie nicht mit den Stufen-Sternen verwechselt werden).
 //   Zeitmodus (nur wenn im Lehrkraft-Bereich an): 1 Minute, gezählt werden richtige Wörter pro Minute,
 //   eigener Rekord nur im Arbeitsspeicher.
-// - Schnittstelle: siehe js/module/README.md. Sterne der Stufe 4 über zaehle() aus sterne.js:
-//   jede RICHTIGE Antwort ist eine Einheit (10 Einheiten = 1 Stern). Die Sterne-Reihe in der Runde
-//   zeigt nur die richtigen Antworten dieser Runde.
+// - Schnittstelle: siehe js/module/README.md. Sterne der Stufe 4 (Entscheidung Anna): während der Übung
+//   still zählen mit starteRunde() aus sterne.js – jede RICHTIGE Antwort ist eine Einheit
+//   (10 Einheiten = 1 Stern) –, am Rundenende ruhig zusammenfassen mit fasseSterneZusammen().
 
 import { lesbareWoerter, sichtwoerter, waehle } from '../woerter.js';
 import { hatBild, bildHtml, woerterMitBild } from '../bilder.js';
 import { sprichWort, sprichAnsage, stoppe } from '../audio.js';
-import { zaehle } from '../sterne.js';
+import { starteRunde as starteSternRunde } from '../sterne.js';
+import { lobe, fasseSterneZusammen } from '../belohnung.js';
 
 const STUFE = 4; // Automatisieren
+// Kurzes Lob zur Halbzeit (5 von 10 Wörtern bzw. 30 Sekunden). VORLÄUFIG an – Annas Entscheidung steht aus.
+const LOB_ZUR_HALBZEIT = true;
 
 const RUNDE = 10;                 // Wörter pro Runde ohne Zeit
 const MINUTE = 60_000;
@@ -43,10 +47,10 @@ const SVG = {
         <path d="M20 12 A8 8 0 1 1 17.7 6.3"/><path d="M18 2.5 V6.8 H13.7"/></svg>`,
   lautsprecher: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M4 9 H8 L13 5 V19 L8 15 H4 Z" fill="currentColor"/><path d="M16.5 8.5 A5 5 0 0 1 16.5 15.5 M19 6 A8.5 8.5 0 0 1 19 18"/></svg>`,
-  stern: `<svg viewBox="0 0 24 24"><path d="M12 2.5 L14.9 8.6 L21.5 9.3 L16.5 13.8 L17.9 20.3 L12 17 L6.1 20.3 L7.5 13.8 L2.5 9.3 L9.1 8.6 Z"/></svg>`,
 };
-const sterne = (n, voll) => Array.from({ length: n }, (_, i) =>
-  `<span class="blitz-stern${i < voll ? ' voll' : ''}">${SVG.stern}</span>`).join('');
+// Treffer der Runde als PUNKTE (wie beim Rutschen) – Sterne gibt es nur für die Stufen (Entscheidung Anna)
+const punkt = (voll = false) => `<span class="blitz-punkt${voll ? ' blitz-voll' : ''}"></span>`;
+const punkte = (n, voll) => Array.from({ length: n }, (_, i) => punkt(i < voll)).join('');
 const sekunden = ms => `${(ms / 1000).toLocaleString('de-DE')} s`;
 
 // Eigene CSS-Datei des Moduls (einmal einbinden; hält app.css frei von Modul-Regeln)
@@ -170,12 +174,12 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
         </div>
         <div class="blitz-modi">
           <button class="blitz-modus" data-modus="runde" aria-label="${RUNDE} Wörter">
-            <span class="gross">${SVG.los}</span>
-            <span class="blitz-sterne klein">${sterne(RUNDE, 0)}</span>
+            <span class="blitz-modus-symbol">${SVG.los}</span>
+            <span class="blitz-punkte blitz-klein">${punkte(RUNDE, 0)}</span>
           </button>
           ${e.zeitmodus ? `
           <button class="blitz-modus" data-modus="minute" aria-label="1 Minute">
-            <span class="gross">${SVG.uhr}</span>
+            <span class="blitz-modus-symbol">${SVG.uhr}</span>
             <span class="blitz-modus-text">1 Minute</span>
             ${merk.rekord ? `<span class="blitz-rekord">Rekord: ${merk.rekord}</span>` : ''}
           </button>` : ''}
@@ -192,13 +196,15 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
     r = {
       modus, richtig: 0, gezeigt: 0, phase: 'bereit', aufgabe: null, angesagt: new Set(),
       liste: modus === 'runde' ? rundenListe(material.vorrat) : null, zeitUm: false,
+      beginn: performance.now(), halbGelobt: false,
+      sterne: starteSternRunde(zustand, STUFE), // zählt still; runde.neu = neue Sterne dieser Runde
     };
     behaelter.innerHTML = `
       <div class="blitz-runde">
         <div class="blitz-leiste">
           ${modus === 'runde'
-            ? `<span class="blitz-sterne">${sterne(RUNDE, 0)}</span>`
-            : `<span class="blitz-zaehler">${SVG.stern}<b>0</b></span>
+            ? `<span class="blitz-punkte">${punkte(RUNDE, 0)}</span>`
+            : `<span class="blitz-zaehler">${punkt(true)}<b>0</b></span>
                <span class="blitz-zeitbalken"><span></span></span>`}
         </div>
         <div class="blitz-feld" aria-live="off"></div>
@@ -207,7 +213,7 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
     if (modus === 'minute') {
       // Balken läuft in 1 Minute ab (CSS-Übergang), danach ist die Runde vorbei
       const balken = behaelter.querySelector('.blitz-zeitbalken span');
-      requestAnimationFrame(() => requestAnimationFrame(() => balken.classList.add('laeuft')));
+      requestAnimationFrame(() => requestAnimationFrame(() => balken.classList.add('blitz-laeuft')));
       warte(MINUTE).then(() => { if (meinLauf === lauf) { r.zeitUm = true; zeigeEnde(); } });
     }
     sprichAnsage('blitz-schau');
@@ -216,9 +222,9 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
 
   function wortHtml(aufgabe) {
     return aufgabe.silben.map((s, i) => {
-      const k = ['silbe'];
-      if (e.hilfen.farben) k.push(i % 2 ? 'rot' : 'blau');
-      if (e.hilfen.boegen) k.push('bogen');
+      const k = ['blitz-silbe'];
+      if (e.hilfen.farben) k.push(i % 2 ? 'blitz-rot' : 'blitz-blau');
+      if (e.hilfen.boegen) k.push('blitz-bogen');
       return `<span class="${k.join(' ')}">${s}</span>`;
     }).join('');
   }
@@ -235,22 +241,22 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
 
     // 1. Fixpunkt
     r.phase = 'bereit';
-    feld.className = 'blitz-feld bereit';
-    feld.innerHTML = '<span class="fixpunkt"></span>';
+    feld.className = 'blitz-feld blitz-bereit';
+    feld.innerHTML = '<span class="blitz-fixpunkt"></span>';
     await warte(FIXPUNKT);
     if (meinLauf !== lauf) return;
 
     // 2. Blitz: Wort kurz zeigen
     r.phase = 'blitz';
-    feld.className = 'blitz-feld blitz';
+    feld.className = 'blitz-feld blitz-zeigt';
     feld.innerHTML = `<span class="blitz-wort">${wortHtml(aufgabe)}</span>`;
     await warte(merk.blitzzeit);
     if (meinLauf !== lauf) return;
 
     // 3. Wort weg, drei Antworten
     r.phase = 'wahl';
-    feld.className = 'blitz-feld leer';
-    feld.innerHTML = '<span class="fragezeichen">?</span>';
+    feld.className = 'blitz-feld blitz-leer';
+    feld.innerHTML = '<span class="blitz-fragezeichen">?</span>';
     karten.className = `blitz-karten ${aufgabe.art}`;
     karten.innerHTML = auswahl(aufgabe, material).map(w => aufgabe.art === 'bild'
       ? `<div class="blitz-karte" data-wort="${w}" role="button" tabindex="0">
@@ -274,37 +280,46 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
     const richtig = karte.dataset.wort === aufgabe.wort;
     const feld = behaelter.querySelector('.blitz-feld');
     for (const k of behaelter.querySelectorAll('.blitz-karte')) {
-      k.classList.add(k.dataset.wort === aufgabe.wort ? 'richtig' : 'gedimmt');
+      k.classList.add(k.dataset.wort === aufgabe.wort ? 'blitz-richtig' : 'blitz-gedimmt');
     }
-    if (!richtig) karte.classList.replace('gedimmt', 'falsch');
+    if (!richtig) karte.classList.replace('blitz-gedimmt', 'blitz-falsch');
 
     // Wort noch einmal zeigen und vorsprechen – so verbinden sich Schriftbild, Klang und Bild
-    feld.className = 'blitz-feld aufloesung';
+    feld.className = 'blitz-feld blitz-aufloesung';
     feld.innerHTML = `<span class="blitz-wort">${wortHtml(aufgabe)}</span>`;
 
     if (richtig) {
       r.richtig++;
-      zaehle(zustand, STUFE); // nur richtige Antworten zählen für die Sterne der Stufe
-      zeigeStern();
+      r.sterne.zaehle(); // still: nur richtige Antworten zählen für die Sterne der Stufe
+      zeigeTreffer();
     }
     const kurz = r.modus === 'minute';
     await sprichUndWarte(sprichWort(aufgabe.wort), 2500);
     if (meinLauf !== lauf) return;
+    // Lob zur Halbzeit – erst nach dem vorgesprochenen Wort, damit es das Vorsprechen nicht unterbricht
+    const haelfte = LOB_ZUR_HALBZEIT && !r.halbGelobt && (r.modus === 'runde'
+      ? r.gezeigt >= RUNDE / 2
+      : performance.now() - r.beginn >= MINUTE / 2);
+    if (haelfte) {
+      r.halbGelobt = true;
+      await sprichUndWarte(lobe(behaelter), 2500);
+      if (meinLauf !== lauf) return;
+    }
     await warte(richtig ? (kurz ? 200 : 500) : (kurz ? 800 : 1500));
     if (meinLauf !== lauf) return;
     naechsteAufgabe();
   }
 
-  function zeigeStern() {
+  function zeigeTreffer() {
     if (r.modus === 'runde') {
-      const stern = behaelter.querySelectorAll('.blitz-leiste .blitz-stern')[r.richtig - 1];
-      stern?.classList.add('voll', 'neu');
+      const p = behaelter.querySelectorAll('.blitz-leiste .blitz-punkt')[r.richtig - 1];
+      p?.classList.add('blitz-voll', 'blitz-neu');
     } else {
       const zahl = behaelter.querySelector('.blitz-zaehler b');
       zahl.textContent = r.richtig;
-      zahl.parentElement.classList.remove('neu');
+      zahl.parentElement.classList.remove('blitz-neu');
       void zahl.offsetWidth; // Animation neu starten
-      zahl.parentElement.classList.add('neu');
+      zahl.parentElement.classList.add('blitz-neu');
     }
   }
 
@@ -316,34 +331,33 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
     let rekord = false;
     if (ergebnis.modus === 'runde') {
       inhalt = `
-        <div class="blitz-sterne gross">${sterne(RUNDE, ergebnis.richtig)}</div>
+        <div class="blitz-punkte blitz-gross">${punkte(RUNDE, ergebnis.richtig)}</div>
         <p class="blitz-ergebnis"><b>${ergebnis.richtig}</b> von ${RUNDE}</p>`;
     } else {
       const vorher = merk.rekord;
       rekord = ergebnis.richtig > vorher;
       if (rekord) merk.rekord = ergebnis.richtig;
       inhalt = `
-        <p class="blitz-ergebnis"><span class="blitz-zaehler gross">${SVG.stern}<b>${ergebnis.richtig}</b></span></p>
+        <p class="blitz-ergebnis"><span class="blitz-zaehler blitz-gross">${punkt(true)}<b>${ergebnis.richtig}</b></span></p>
         <p class="blitz-ergebnis-text">Wörter in 1 Minute</p>
         ${rekord
-          ? `<p class="blitz-rekord neu">Neuer Rekord!</p>`
+          ? `<p class="blitz-rekord blitz-neu">Neuer Rekord!</p>`
           : `<p class="blitz-rekord">Dein Rekord: ${vorher}</p>`}`;
     }
     behaelter.innerHTML = `
       <div class="blitz-ende">
-        ${inhalt}
+        <div class="blitz-ende-ergebnis">${inhalt}</div>
         <div class="blitz-ende-knoepfe">
           <button class="blitz-nochmal" data-modus="${ergebnis.modus}" aria-label="Nochmal">${SVG.nochmal}</button>
           <button class="blitz-zum-start" aria-label="Blitz-Zeit und Modus wählen">${SVG.blitz}</button>
         </div>
       </div>`;
     r = null;
-    // Ansage: „Geschafft!“ bzw. „Neuer Rekord!“, dann die Zahl (Aufnahmen gibt es für 1–16)
-    const meinLauf = lauf;
-    (async () => {
-      await sprichUndWarte(sprichAnsage(rekord ? 'blitz-rekord' : 'blitz-fertig'), 2500);
-      if (meinLauf === lauf && ergebnis.richtig >= 1 && ergebnis.richtig <= 16) sprichAnsage(`zahl-${ergebnis.richtig}`);
-    })();
+    // Ruhige Zusammenfassung: „Geschafft!“ bzw. „Neuer Rekord!“, dann die neuen Sterne dieser Runde
+    // („Du hast in dieser Übung … neue Sterne bekommen.“) – bei 0 neuen Sternen lobt fasseSterneZusammen selbst.
+    // Bricht von selbst ab, wenn das Kind weitertippt (Bereich neu gezeichnet).
+    fasseSterneZusammen(behaelter.querySelector('.blitz-ende-ergebnis'), ergebnis.sterne.neu,
+      { vorweg: [rekord ? 'neuer-rekord' : 'geschafft'] });
   }
 
   // ---------- Bedienung ----------
