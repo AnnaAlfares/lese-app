@@ -37,6 +37,9 @@ $('plosive').addEventListener('click', () => { e.plosive = !e.plosive; aktualisi
 // Wörter mit ie
 $('ie').addEventListener('click', () => { e.ieErlaubt = !e.ieErlaubt; aktualisiere(); });
 
+// Silbenteppich: bei jedem Durchgang neu mischen
+$('teppich-mischen').addEventListener('click', () => { e.teppichNeuMischen = !e.teppichNeuMischen; aktualisiere(); });
+
 // Sprechtempo
 $('tempo').value = e.tempo;
 $('tempo').addEventListener('input', () => { e.tempo = Number($('tempo').value); aktualisiere(); });
@@ -71,6 +74,7 @@ function aktualisiere() {
   $('zeitmodus').setAttribute('aria-pressed', e.zeitmodus);
   $('plosive').setAttribute('aria-pressed', e.plosive);
   $('ie').setAttribute('aria-pressed', e.ieErlaubt);
+  $('teppich-mischen').setAttribute('aria-pressed', e.teppichNeuMischen);
   const ieStand = position('ie');
   $('ie-hinweis').textContent = e.ieErlaubt && n < ieStand
     ? `wirkt erst ab Stand ${ieStand} (${BUCHSTABEN[ieStand - 1].anzeige})` : '';
