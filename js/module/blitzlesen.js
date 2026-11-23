@@ -353,11 +353,14 @@ export function starte(behaelter, { einstellungen: e, zustand, zurueck }) {
         </div>
       </div>`;
     r = null;
-    // Ruhige Zusammenfassung: „Geschafft!“ bzw. „Neuer Rekord!“, dann die neuen Sterne dieser Runde
-    // („Du hast in dieser Übung … neue Sterne bekommen.“) – bei 0 neuen Sternen lobt fasseSterneZusammen selbst.
-    // Bricht von selbst ab, wenn das Kind weitertippt (Bereich neu gezeichnet).
-    fasseSterneZusammen(behaelter.querySelector('.blitz-ende-ergebnis'), ergebnis.sterne.neu,
-      { vorweg: [rekord ? 'neuer-rekord' : 'geschafft'] });
+    // Ruhige Zusammenfassung. Vorweg: ohne Zeit „Geschafft!“; im Minutenmodus „Die Zeit ist um.“
+    // (gemeinsame Ansage zeit-um), bei neuem Rekord danach „Neuer Rekord!“. Dann die neuen Sterne dieser
+    // Runde („Du hast in dieser Übung … neue Sterne bekommen.“) – bei 0 neuen Sternen lobt
+    // fasseSterneZusammen selbst. Bricht von selbst ab, wenn das Kind weitertippt (Bereich neu gezeichnet).
+    const vorweg = ergebnis.modus === 'minute'
+      ? ['zeit-um', ...(rekord ? ['neuer-rekord'] : [])]
+      : ['geschafft'];
+    fasseSterneZusammen(behaelter.querySelector('.blitz-ende-ergebnis'), ergebnis.sterne.neu, { vorweg });
   }
 
   // ---------- Bedienung ----------

@@ -129,9 +129,11 @@ eine Regel `.fertig svg { width: 36px }` hat in einem anderen Modul jedes Bild i
 |---|---|---|
 | Bildercode (`codeeingabe.js`, `css/bildercode.css`) | `code-` | `.code-bild`, `.code-fertig`, `.code-abschluss` |
 | Belohnung (`belohnung.js`, `css/belohnung.css`) | `belohnung` | `.belohnung`, `.belohnung-sterne` |
-| Blitzlesen | `blitz-` | `.blitz-sterne`, `.blitz-ende` |
+| Blitzlesen | `blitz-` | `.blitz-punkt`, `.blitz-ende` |
+| Leseapparat | `la-` | `.la-apparat`, `.la-bogen` |
+| Rutschen | `rutsch-` | `.rutsch-punkt`, `.rutsch-voll` |
 | Silbenteppich | `st-` | `.st-ende` |
-| neues Modul | kurzes, eindeutiges Präfix | z. B. `rutsch-`, `lapp-` |
+| neues Modul | kurzes, eindeutiges Präfix | z. B. `wf-` (Wort-Fang) |
 
 Regeln:
 - Keine allgemeinen Klassennamen wie `.fertig`, `.stern`, `.sterne`, `.ende`, `.abschluss`, `.vorlesen`,
