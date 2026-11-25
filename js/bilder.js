@@ -2,13 +2,13 @@
 // Module holen Bilder nur von hier, nie aus eigenen Listen.
 //
 // Drei Arten von Bildern:
-//   datei  eigenes Bild (PNG) aus assets/, z. B. die Bildercode-Bilder in assets/codebilder/
+//   datei  eigenes Bild (PNG oder SVG) aus assets/, z. B. die Bildercode-Bilder in assets/codebilder/
 //   emoji  VORLÄUFIG ein Emoji der Gerät-Schrift (keine externe Datei, kein Dienst), bis es eigene
 //          Bilder gibt. Ein Emoji, das das Gerät nicht kann (zeigt nur ein Kästchen), wird erkannt
 //          und das Wort gilt dann als „ohne Bild“.
 //   text   eine Zahl als Bild (elf → 11)
 //
-// Eigene Bilder ergänzen: PNG nach assets/bilder/<wort>.png legen (Dateiname wie bei den
+// Eigene Bilder ergänzen: PNG oder SVG nach assets/bilder/<wort>.png bzw. .svg legen (Dateiname wie bei den
 // Aufnahmen: klein, ä→ae …) und hier { datei: 'bilder/<wort>.png' } eintragen.
 // Regel: Jedes Bild gehört zu genau einem Wort (keine zwei Wörter mit demselben Bild),
 // sonst wäre bei der Auswahl aus 3 Bildern mehr als eine Antwort richtig.
@@ -28,6 +28,9 @@ const BILDER = {
   Nase:   { datei: 'codebilder/15_nase.png' },
   Raupe:  { datei: 'codebilder/16_raupe.png' },
 
+  // Eigene Bilder in assets/bilder/
+  rot:    { datei: 'bilder/rot.svg' }, // roter Farbklecks – kein Kreis, damit er nicht wie ein Treffer-Punkt aussieht
+
   // Vorläufige Emoji-Bilder (nur eindeutig erkennbare)
   Mama:    { emoji: '👩‍👧' },
   Oma:     { emoji: '👵' },
@@ -46,7 +49,6 @@ const BILDER = {
   Mantel:  { emoji: '🧥' },
   Elefant: { emoji: '🐘' },
   Fest:    { emoji: '🎉' },
-  rot:     { emoji: '🔴' },
   Rose:    { emoji: '🌹' },
   Insel:   { emoji: '🏝️' },
   Film:    { emoji: '🎬' },
