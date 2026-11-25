@@ -125,7 +125,7 @@ export const STUFEN = Object.freeze([
 // ---------------------------------------------------------------------------
 // Einstellungen der Lehrkraft – nur als URL-Parameter
 // ---------------------------------------------------------------------------
-// Beispiel: index.html?b=12&h=bfi&z=1&t=80&p=0&ie=0
+// Beispiel: index.html?b=12&h=bfi&z=1&t=80&p=0&ie=0&tm=0&v=vor&s=andika
 //   b  Buchstabenstand (1–41): so viele Grapheme der Reihenfolge sind eingeführt
 //   h  Hilfen als Kürzel (siehe HILFEN), „0“ = keine Hilfen
 //   z  Zeitmodus 1 = an, 0 = aus (Standard: aus – die Lehrkraft schaltet ihn ein)
@@ -134,6 +134,11 @@ export const STUFEN = Object.freeze([
 //   ie Wörter und Silben mit ie erlauben: 1 = ja, 0 = nein (Standard: nein; wirkt erst ab Stand 25)
 //   tm Silbenteppich bei jedem Durchgang neu mischen: 1 = ja, 0 = nein (Standard: nein – „Noch einmal“
 //      zeigt denselben Teppich, Rekord je Teppich; ja = auch „Noch einmal“ mischt neu, Rekord je Buchstabenstand)
+//   v  Vorlesen beim Rutschen und im Leseapparat (Feld `vorlesen`):
+//      'vor'  = die App spricht VOR dem eigenen Lesen vor (Vormachen) – Standard
+//      'nach' = das Kind liest zuerst selbst, die App spricht DANACH zur Kontrolle
+//      Die Module werten das Feld selbst aus (eigene Threads).
+//   s  Schrift (Feld `schrift`, siehe SCHRIFTEN): 'andika' (Standard), 'grund', 'system'
 
 export const HILFEN = Object.freeze([
   { id: 'boegen',   kuerzel: 'b', titel: 'Silbenbögen' },
@@ -143,6 +148,16 @@ export const HILFEN = Object.freeze([
   { id: 'bilder',   kuerzel: 'i', titel: 'Bilder' },
 ]);
 
+// Schriften: alle lokal in assets/fonts/ (Lizenzdateien liegen daneben), eingebunden in css/app.css.
+// id = Wert des URL-Parameters s und von <html data-schrift="…">.
+export const SCHRIFTEN = Object.freeze([
+  { id: 'andika', titel: 'Andika', hinweis: 'einstöckiges a, klare Formen (SIL, OFL)' },
+  { id: 'grund',  titel: 'Grundschrift', hinweis: 'Playwrite Deutschland Grundschrift (TypeTogether, OFL)' },
+  { id: 'system', titel: 'Systemschrift', hinweis: 'Schrift des Geräts, zweistöckiges a' },
+]);
+
+export const VORLESEN = Object.freeze(['vor', 'nach']);
+
 export const STANDARD = Object.freeze({
   stand: 12,                                   // O bis U
   hilfen: ['boegen', 'farben', 'bilder'],
@@ -151,7 +166,11 @@ export const STANDARD = Object.freeze({
   plosive: false,                              // Leseapparat: nur dehnbare Laute
   ieErlaubt: false,                            // Silben/Wörter mit ie aussortiert
   teppichNeuMischen: false,                    // Silbenteppich: „Noch einmal“ = derselbe Teppich
+  vorlesen: 'vor',                             // Rutschen/Leseapparat: erst vorsprechen, dann lesen
+  schrift: 'andika',                           // freie Schrift mit einstöckigem a
 });
+
+const ausListe = (wert, liste, ersatz) => (liste.includes(wert) ? wert : ersatz);
 
 const begrenze = (zahl, min, max, ersatz) =>
   Number.isFinite(zahl) ? Math.min(max, Math.max(min, Math.round(zahl))) : ersatz;
@@ -166,6 +185,8 @@ export function leseEinstellungen(query = globalThis.location?.search ?? '') {
     plosive: p.has('p') ? p.get('p') === '1' : STANDARD.plosive,
     ieErlaubt: p.has('ie') ? p.get('ie') === '1' : STANDARD.ieErlaubt,
     teppichNeuMischen: p.has('tm') ? p.get('tm') === '1' : STANDARD.teppichNeuMischen,
+    vorlesen: ausListe(p.get('v'), VORLESEN, STANDARD.vorlesen),
+    schrift: ausListe(p.get('s'), SCHRIFTEN.map(x => x.id), STANDARD.schrift),
     hilfen: {},
   };
   const h = p.get('h');
@@ -179,9 +200,16 @@ export function leseEinstellungen(query = globalThis.location?.search ?? '') {
 export function einstellungenAlsParameter(e) {
   const h = HILFEN.filter(hilfe => e.hilfen[hilfe.id]).map(hilfe => hilfe.kuerzel).join('') || '0';
   return new URLSearchParams({ b: e.stand, h, z: e.zeitmodus ? 1 : 0, t: e.tempo, p: e.plosive ? 1 : 0,
-    ie: e.ieErlaubt ? 1 : 0, tm: e.teppichNeuMischen ? 1 : 0 })
+    ie: e.ieErlaubt ? 1 : 0, tm: e.teppichNeuMischen ? 1 : 0, v: e.vorlesen, s: e.schrift })
     .toString();
 }
+
+/** Setzt die Schrift der Seite (<html data-schrift="…">, Regeln in css/app.css). */
+export function wendeSchriftAn(schrift) {
+  if (globalThis.document) document.documentElement.dataset.schrift = schrift;
+}
+// Jede Seite lädt config.js – so gilt die Schrift aus der Adresse überall (App, Lehrkraft, Testseiten).
+wendeSchriftAn(leseEinstellungen().schrift);
 
 /** Hängt die aktuellen Einstellungen an einen internen Link an, damit sie beim Weiterklicken erhalten bleiben. */
 export function mitEinstellungen(href, e = leseEinstellungen()) {

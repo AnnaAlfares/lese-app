@@ -1,12 +1,29 @@
 // Lehrkraft-Bereich: Einstellungen wählen und als Link weitergeben.
 // Der Zustand steht nur in der Adresse dieser Seite (history.replaceState) – kein Speichern.
 
-import { BUCHSTABEN, HILFEN, leseEinstellungen, einstellungenAlsParameter, position } from './config.js';
+import { BUCHSTABEN, HILFEN, SCHRIFTEN, leseEinstellungen, einstellungenAlsParameter, position, wendeSchriftAn }
+  from './config.js';
+import { pruefePasswort } from './passwort.js';
 import { lesbareWoerter, lesbareSilben, sichtwoerter } from './woerter.js';
 import { setzeTempo, sprichMitStimme, stimmeBereit } from './audio.js';
 
 const e = leseEinstellungen();
 const $ = id => document.getElementById(id);
+
+// Passwort-Sperre: Einstellungen erst nach richtigem Passwort zeigen (nur für diese geöffnete Seite)
+$('passwort').focus();
+$('sperre-form').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const feld = $('passwort');
+  if (await pruefePasswort(feld.value)) {
+    feld.value = '';
+    $('sperre').remove();
+    $('einstellungen').hidden = false;
+  } else {
+    $('sperre-meldung').textContent = 'Das Passwort stimmt nicht. Bitte noch einmal eingeben.';
+    feld.select();
+  }
+});
 
 // Buchstaben-Knöpfe
 $('buchstaben').innerHTML = BUCHSTABEN
@@ -39,6 +56,24 @@ $('ie').addEventListener('click', () => { e.ieErlaubt = !e.ieErlaubt; aktualisie
 
 // Silbenteppich: bei jedem Durchgang neu mischen
 $('teppich-mischen').addEventListener('click', () => { e.teppichNeuMischen = !e.teppichNeuMischen; aktualisiere(); });
+
+// Vorlesen vorher / nachher (Rutschen, Leseapparat)
+$('vorlesen').addEventListener('click', ev => {
+  const knopf = ev.target.closest('[data-vorlesen]');
+  if (!knopf) return;
+  e.vorlesen = knopf.dataset.vorlesen;
+  aktualisiere();
+});
+
+// Schrift
+$('schriften').innerHTML = SCHRIFTEN
+  .map(s => `<button data-schrift="${s.id}" title="${s.hinweis}">${s.titel}</button>`).join('');
+$('schriften').addEventListener('click', ev => {
+  const knopf = ev.target.closest('button[data-schrift]');
+  if (!knopf) return;
+  e.schrift = knopf.dataset.schrift;
+  aktualisiere();
+});
 
 // Sprechtempo
 $('tempo').value = e.tempo;
@@ -75,6 +110,9 @@ function aktualisiere() {
   $('plosive').setAttribute('aria-pressed', e.plosive);
   $('ie').setAttribute('aria-pressed', e.ieErlaubt);
   $('teppich-mischen').setAttribute('aria-pressed', e.teppichNeuMischen);
+  for (const knopf of $('vorlesen').children) knopf.setAttribute('aria-pressed', knopf.dataset.vorlesen === e.vorlesen);
+  for (const knopf of $('schriften').children) knopf.setAttribute('aria-pressed', knopf.dataset.schrift === e.schrift);
+  wendeSchriftAn(e.schrift);
   const ieStand = position('ie');
   $('ie-hinweis').textContent = e.ieErlaubt && n < ieStand
     ? `wirkt erst ab Stand ${ieStand} (${BUCHSTABEN[ieStand - 1].anzeige})` : '';

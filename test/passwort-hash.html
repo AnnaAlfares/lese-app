@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Hilfsseite – Passwort-Hash für den Lehrkraft-Bereich</title>
+  <link rel="stylesheet" href="../css/app.css">
+  <style>
+    body { font-size: 20px; letter-spacing: 0; }
+    .ph-feld { font: inherit; min-height: 64px; width: 420px; padding: 8px 16px; border: 3px solid var(--rand); border-radius: 20px; }
+    .ph-hash { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 18px; word-break: break-all;
+      background: #fff; border: 2px solid var(--rand); border-radius: 12px; padding: 12px; min-height: 3em; }
+    code { background: #f1eee8; padding: 0 4px; border-radius: 4px; }
+    li { margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Passwort für den Lehrkraft-Bereich setzen</h1>
+    <p>Diese Seite rechnet nur hier im Browser. Nichts wird gesendet oder gespeichert.</p>
+    <ol>
+      <li>Neues Passwort eingeben. Der Hash erscheint darunter.</li>
+      <li>In <code>js/passwort.js</code> die Zeile <code>export const PASSWORT_HASH = '…';</code> suchen und den
+        Hash zwischen die Anführungszeichen setzen.</li>
+      <li>Speichern, committen, auf GitHub hochladen. Ab dann gilt das neue Passwort.</li>
+    </ol>
+    <p><label for="pw">Passwort</label><br>
+      <input class="ph-feld" id="pw" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></p>
+    <p>Hash:</p>
+    <div class="ph-hash" id="hash"></div>
+    <p class="leise" id="vergleich"></p>
+    <p class="leise">Hinweis: Das Passwort hält Kinder vom versehentlichen Umstellen ab. Weil der Code öffentlich auf GitHub
+      liegt, schützt es nicht vor Fachleuten – also kein Passwort nehmen, das Sie anderswo benutzen.</p>
+  </main>
+  <script type="module">
+    import { passwortHash, PASSWORT_HASH } from '../js/passwort.js';
+    const feld = document.getElementById('pw');
+    const zeige = async () => {
+      const wert = feld.value;
+      const hash = wert ? await passwortHash(wert) : '';
+      if (feld.value !== wert) return; // inzwischen weitergetippt
+      document.getElementById('hash').textContent = hash;
+      document.getElementById('vergleich').textContent = !wert ? ''
+        : hash === PASSWORT_HASH ? 'Das ist das Passwort, das gerade in js/passwort.js eingetragen ist.'
+        : 'Noch nicht eingetragen.';
+    };
+    feld.addEventListener('input', zeige);
+    feld.focus();
+  </script>
+</body>
+</html>

@@ -6,6 +6,7 @@ import { aktiviereSprechknoepfe, sprichAnsage } from './audio.js';
 import { modulAnsage, dateiStamm } from './aufnahmen.js';
 import { zeigeCodeEingabe, zeigeAbschluss, sterneHtml } from './codeeingabe.js';
 import { setzeSpielstand } from './sterne.js';
+import { modulRueckgabe, starteTastatur } from './tastatur.js';
 
 // Einstellungen der Lehrkraft (aus der Adresse) und Spielstand (nur im Arbeitsspeicher)
 export const einstellungen = leseEinstellungen();
@@ -89,11 +90,13 @@ function zeigeStufe(nr) {
 // ---------------------------------------------------------------------------
 // Module werden automatisch eingetragen: Datei js/module/<dateiStamm(name)>.js
 // („Wort-Fang“ → wort-fang.js). Gibt es die Datei, wird die Kachel aktiv.
-// Schnittstelle: starte(behaelter, { einstellungen, zustand, zurueck }) → optional Aufräum-Funktion.
+// Schnittstelle: starte(behaelter, { einstellungen, zustand, zurueck }) → optional Aufräum-Funktion
+// oder { aufraeumen, tasten: { weiter, aufdecken, wahl } } (Digiboard-Tastatur, js/tastatur.js).
 // Genaue Beschreibung: js/module/README.md
 // ---------------------------------------------------------------------------
 const modulUrl = name => new URL(`./module/${dateiStamm(name)}.js`, import.meta.url).href;
 let beendeModul = null;
+let modulTasten = null;  // Tasten des angezeigten Moduls (Leertaste, Enter, Ziffern)
 let aktuelleStufe = null;
 let aktivesModul = null; // Kennung des angezeigten Moduls (gegen verspätete zurueck()-Aufrufe)
 
@@ -111,10 +114,10 @@ async function zeigeModul(name, stufenNr) {
   aktivesModul = meinModul;
   // zurueck(): das Modul kehrt selbst zur Stufe zurück (wirkt nur, solange es noch angezeigt wird)
   const zurueck = () => { if (aktivesModul === meinModul) verlasseModul(); };
-  const aufraeumen = modul.starte(app.querySelector('.modul'), { einstellungen, zustand, zurueck });
-  const fn = typeof aufraeumen === 'function' ? aufraeumen : null;
-  if (aktivesModul === meinModul) beendeModul = fn;
-  else fn?.(); // zurueck() wurde schon während starte() aufgerufen
+  const { aufraeumen, tasten } = modulRueckgabe(
+    modul.starte(app.querySelector('.modul'), { einstellungen, zustand, zurueck }));
+  if (aktivesModul === meinModul) { beendeModul = aufraeumen; modulTasten = tasten; }
+  else aufraeumen?.(); // zurueck() wurde schon während starte() aufgerufen
 }
 
 /** Modul aufräumen und zur Stufe zurückkehren. */
@@ -122,6 +125,7 @@ function verlasseModul() {
   const aufraeumen = beendeModul;
   const nr = aktuelleStufe;
   beendeModul = null;
+  modulTasten = null;
   aktuelleStufe = null;
   aktivesModul = null;
   try { aufraeumen?.(); } catch (fehler) { console.error(fehler); }
@@ -153,6 +157,18 @@ app.addEventListener('click', e => {
       zeigeStart();
     }
   }
+});
+
+// Digiboard-Tastatur: Leertaste/Enter/Ziffern gehen an das Modul, Escape = Zurück-Pfeil der Kopfzeile.
+// Eingabefelder (z. B. Passwort) bleiben unberührt (js/tastatur.js).
+starteTastatur(() => (aktivesModul ? modulTasten : null), {
+  zurueck: () => {
+    if (app.querySelector('.code-abschluss')) return false; // Abschluss mit Code: nur per Fingertipp
+    const pfeil = app.querySelector(':scope > .kopf .zurueck');
+    if (!pfeil) return false;
+    pfeil.click();
+    return true;
+  },
 });
 
 aktiviereSprechknoepfe(app);

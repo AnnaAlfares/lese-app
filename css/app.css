@@ -2,9 +2,32 @@
    Ruhige Oberfläche, große Druckschrift (mind. 32 px), große Schaltflächen (mind. 64 px),
    Querformat für iPad und Digiboard. Schriften nur lokal aus assets/fonts/. */
 
+/* ---------- Schriften (lokal, Lizenzen: OFL.txt im jeweiligen Ordner von assets/fonts) ----------
+   Umschaltbar über den URL-Parameter s (js/config.js: SCHRIFTEN), gesetzt als <html data-schrift="…">.
+   Andika hat nur Normal (400) und Fett (700); font-weight 600 nimmt die fette Datei. */
+@font-face {
+  font-family: "Andika Lese";
+  src: url("../assets/fonts/andika/Andika-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Andika Lese";
+  src: url("../assets/fonts/andika/Andika-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+/* Playwrite Deutschland Grundschrift: variable Schrift, Strichstärke 100–400 */
+@font-face {
+  font-family: "Grundschrift Lese";
+  src: url("../assets/fonts/playwrite-de-grund/PlaywriteDEGrund-wght.ttf") format("truetype");
+  font-weight: 100 400;
+  font-display: swap;
+}
+
 :root {
-  /* Noch keine eigene Schrift in assets/fonts/ – bis dahin Systemschrift. */
-  --schrift: "Andika", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --schrift-system: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --schrift: "Andika Lese", var(--schrift-system);   /* Standard: Andika */
   --text: #2b2b2b;
   --hintergrund: #fbf8f2;
   --flaeche: #ffffff;
@@ -16,6 +39,9 @@
   --knopf: 64px;           /* Mindestgröße für Touch */
   --radius: 20px;
 }
+
+:root[data-schrift="grund"]  { --schrift: "Grundschrift Lese", var(--schrift-system); }
+:root[data-schrift="system"] { --schrift: var(--schrift-system); }
 
 * { box-sizing: border-box; }
 
@@ -138,3 +164,28 @@ footer a { color: #777; }
 .vorschau { font-size: 22px; }
 .vorschau .neu { background: var(--neu); border-radius: 6px; padding: 0 4px; }
 .leise { color: #666; font-size: 20px; }
+
+/* Schrift-Knöpfe zeigen sich in ihrer eigenen Schrift, die Probe in der gewählten */
+#schriften [data-schrift="andika"] { font-family: "Andika Lese", var(--schrift-system); }
+#schriften [data-schrift="grund"]  { font-family: "Grundschrift Lese", var(--schrift-system); }
+#schriften [data-schrift="system"] { font-family: var(--schrift-system); }
+.lk-schriftprobe { font-size: 40px; margin: 12px 0 0; }
+
+/* ---------- Passwort-Sperre des Lehrkraft-Bereichs (ruhig, kein Pop-up) ---------- */
+.lk-sperre { font-size: 24px; max-width: 900px; }
+.lk-sperre h1 { font-size: 40px; }
+.lk-sperre-form label { display: block; margin-bottom: 8px; }
+.lk-sperre-form .zeile { margin-top: 0; }
+.lk-sperre-feld {
+  font: inherit;
+  min-height: var(--knopf);
+  width: 420px;
+  max-width: 100%;
+  padding: 8px 16px;
+  border: 3px solid var(--rand);
+  border-radius: var(--radius);
+  background: var(--flaeche);
+  letter-spacing: 0.1em;
+}
+.lk-sperre-feld:focus-visible { outline: 4px solid var(--akzent); outline-offset: 3px; }
+.lk-sperre-meldung { min-height: 1.5em; margin: 12px 0 0; }
