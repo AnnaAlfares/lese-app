@@ -132,6 +132,8 @@ export const STUFEN = Object.freeze([
 //   t  Sprechtempo in Prozent (50–150)
 //   p  Plosive (t, k, p …) im Leseapparat: 1 = ja, 0 = nein (Standard: nein, nur dehnbare Laute)
 //   ie Wörter und Silben mit ie erlauben: 1 = ja, 0 = nein (Standard: nein; wirkt erst ab Stand 25)
+//   tm Silbenteppich bei jedem Durchgang neu mischen: 1 = ja, 0 = nein (Standard: nein – „Noch einmal“
+//      zeigt denselben Teppich, Rekord je Teppich; ja = auch „Noch einmal“ mischt neu, Rekord je Buchstabenstand)
 
 export const HILFEN = Object.freeze([
   { id: 'boegen',   kuerzel: 'b', titel: 'Silbenbögen' },
@@ -148,6 +150,7 @@ export const STANDARD = Object.freeze({
   tempo: 80,
   plosive: false,                              // Leseapparat: nur dehnbare Laute
   ieErlaubt: false,                            // Silben/Wörter mit ie aussortiert
+  teppichNeuMischen: false,                    // Silbenteppich: „Noch einmal“ = derselbe Teppich
 });
 
 const begrenze = (zahl, min, max, ersatz) =>
@@ -162,6 +165,7 @@ export function leseEinstellungen(query = globalThis.location?.search ?? '') {
     tempo: begrenze(parseInt(p.get('t'), 10), 50, 150, STANDARD.tempo),
     plosive: p.has('p') ? p.get('p') === '1' : STANDARD.plosive,
     ieErlaubt: p.has('ie') ? p.get('ie') === '1' : STANDARD.ieErlaubt,
+    teppichNeuMischen: p.has('tm') ? p.get('tm') === '1' : STANDARD.teppichNeuMischen,
     hilfen: {},
   };
   const h = p.get('h');
@@ -175,7 +179,7 @@ export function leseEinstellungen(query = globalThis.location?.search ?? '') {
 export function einstellungenAlsParameter(e) {
   const h = HILFEN.filter(hilfe => e.hilfen[hilfe.id]).map(hilfe => hilfe.kuerzel).join('') || '0';
   return new URLSearchParams({ b: e.stand, h, z: e.zeitmodus ? 1 : 0, t: e.tempo, p: e.plosive ? 1 : 0,
-    ie: e.ieErlaubt ? 1 : 0 })
+    ie: e.ieErlaubt ? 1 : 0, tm: e.teppichNeuMischen ? 1 : 0 })
     .toString();
 }
 

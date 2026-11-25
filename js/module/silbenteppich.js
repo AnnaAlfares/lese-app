@@ -120,9 +120,11 @@ export function baueTeppich(stand, aufbau, nummer) {
 
   // geordnet: Vokalzeile oben, dann je Konsonant: Laut, danach die Silben mit allen Vokalen
   const eingefuehrt = BUCHSTABEN.slice(0, stand);
-  const vokale = vokalSpalten(eingefuehrt.filter(b => b.typ === 'vokal'), neuesteId, rnd)
+  // nur Buchstaben, zu denen es lesbare Silben gibt (z. B. ie ausgeschaltet → keine leere ie-Spalte)
+  const hatSilbe = (b, teil) => offen.some(s => s.grapheme[teil].id === b.id);
+  const vokale = vokalSpalten(eingefuehrt.filter(b => b.typ === 'vokal' && hatSilbe(b, 1)), neuesteId, rnd)
     .sort((a, b) => VOKAL_FOLGE.indexOf(a.id) - VOKAL_FOLGE.indexOf(b.id));
-  const konsonanten = auswahl(eingefuehrt.filter(b => b.typ !== 'vokal' && b.anfang), MAX_ZEILEN, neuesteId, rnd)
+  const konsonanten = auswahl(eingefuehrt.filter(b => b.typ !== 'vokal' && b.anfang && hatSilbe(b, 0)), MAX_ZEILEN, neuesteId, rnd)
     .sort((a, b) => eingefuehrt.indexOf(a) - eingefuehrt.indexOf(b));
   if (!konsonanten.length) return [];
 
@@ -267,9 +269,13 @@ export function starte(wurzel, { einstellungen, zustand }) {
   // ----- Lesen -----
   function zeigeTeppich(modus) {
     aufraeumen();
+    // Lehrkraft-Schalter „bei jedem Durchgang neu mischen“ (tm=1): jeder Durchgang bekommt einen neuen Teppich,
+    // der Rekord gilt dann je Buchstabenstand. Standard (aus): „Noch einmal“ = derselbe Teppich, Rekord je Teppich.
+    const neuMischen = einstellungen.teppichNeuMischen;
+    if (neuMischen) wahl.nummer++;
     const zeilen = baueTeppich(stand, wahl.aufbau, wahl.nummer);
     const felder = zeilen.flat().filter(f => f.art !== 'leer');
-    const rekordSchluessel = `${stand}|${wahl.aufbau}|${wahl.nummer}|${modus}`;
+    const rekordSchluessel = `${stand}|${wahl.aufbau}|${neuMischen ? 'gemischt-je-durchgang' : wahl.nummer}|${modus}`;
     const zeit = modus !== 'frei';
     const h = { farben: wahl.farben, koenig: hilfen.koenig };
 
@@ -464,7 +470,7 @@ export function starte(wurzel, { einstellungen, zustand }) {
       const aktion = e.target.closest('[data-aktion]')?.dataset.aktion;
       if (aktion === 'nochmal') { sprichAnsage('noch-einmal-lesen'); return zeigeTeppich(modus); }
       if (aktion === 'auswahl') return zeigeAuswahl();
-      if (aktion === 'neu') { sprichAnsage('neuer-teppich'); wahl.nummer++; return zeigeTeppich(modus); }
+      if (aktion === 'neu') { sprichAnsage('neuer-teppich'); if (!neuMischen) wahl.nummer++; return zeigeTeppich(modus); }
       if (e.target.closest('.st-teppich')) weiter(); // Antippen irgendwo auf dem Teppich: nächste Silbe
     };
 
