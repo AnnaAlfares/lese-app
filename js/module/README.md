@@ -20,14 +20,58 @@ export function starte(behaelter, { einstellungen, zustand, zurueck }) {
 
 - `behaelter`: DOM-Element, in das das Modul zeichnet. Die Kopfzeile mit Zurück-Pfeil und
   Modulname baut `app.js` selbst.
-- `einstellungen`: Lehrkraft-Einstellungen aus der Adresse (`stand`, `hilfen`, `zeitmodus`, `tempo`),
-  siehe `leseEinstellungen()` in `config.js`. Nur lesen.
+- `einstellungen`: Lehrkraft-Einstellungen aus der Adresse (`stand`, `hilfen`, `zeitmodus`, `tempo`,
+  `plosive`, `ieErlaubt`, `teppichNeuMischen`, `vorlesen`, `schrift`), siehe `leseEinstellungen()` in `config.js`. Nur lesen.
+  - `vorlesen` (`'vor'` | `'nach'`, Standard `'vor'`, URL `v=`): gilt für **Rutschen und Leseapparat**.
+    `'vor'` = die App spricht Silbe/Wort vor dem eigenen Lesen vor (Vormachen, bisheriges Verhalten).
+    `'nach'` = das Kind liest zuerst selbst, die App spricht erst danach zur Kontrolle.
+    Die Lehrkraft stellt das je Kind ein (eigener Link). Wie „danach“ im Modul genau aussieht, entscheidet der Modul-Thread.
+  - `schrift` regelt `app.css` selbst (`<html data-schrift>`); Module schreiben `font-family: var(--schrift)`,
+    nie eine feste Schrift.
 - `zustand`: Spielstand im Arbeitsspeicher (kein localStorage). Eigene Werte unter einem eigenen
   Schlüssel ablegen, z. B. `zustand.blitzlesen ??= { … }`.
   `zustand.sterne` und `zustand.zaehler` **nur über `zaehle()` aus `../sterne.js` verändern** (siehe unten).
 - `zurueck()`: Das Modul darf sie aufrufen, um selbst zur Stufe zurückzukehren (z. B. nach „Fertig“).
   `app.js` ruft dabei die Aufräum-Funktion auf.
-- Rückgabe (optional): Aufräum-Funktion. `app.js` ruft sie beim Verlassen auf (Zurück-Pfeil oder `zurueck()`).
+- Rückgabe (optional), eine von beiden Formen:
+  - **Aufräum-Funktion** (wie bisher). `app.js` ruft sie beim Verlassen auf (Zurück-Pfeil oder `zurueck()`).
+  - **Objekt** `{ aufraeumen, tasten }` für die Digiboard-Tastatur (siehe unten). Beide Teile freiwillig.
+
+## Digiboard-Tastatur (`../tastatur.js`)
+
+Am Digiboard bedient die Lehrkraft mit Tastatur oder Presenter. `app.js` fängt die Tasten zentral ab und gibt
+sie an das angezeigte Modul weiter:
+
+| Taste | Funktion im Modul | Bedeutung |
+|---|---|---|
+| Leertaste | `tasten.weiter()` | weiter / nächste Silbe / neu |
+| Enter | `tasten.aufdecken()` | aufdecken / bestätigen / vorsprechen |
+| 1, 2, 3 (bis 9) | `tasten.wahl(n)` | Auswahl n bzw. Silbe n festhalten |
+| Escape | – (regelt `app.js`) | zurück, wie der Zurück-Pfeil |
+
+```js
+export function starte(behaelter, { einstellungen, zustand, zurueck }) {
+  // …
+  return {
+    aufraeumen() { /* wie bisher */ },
+    tasten: {
+      weiter() { naechsteSilbe(); },
+      aufdecken() { deckeAuf(); },
+      wahl(n) { if (n > 3) return false; waehle(n); },  // false = Taste nicht benutzt
+    },
+  };
+}
+```
+
+- Alle Tasten-Funktionen sind freiwillig. Fehlt eine, passiert bei dieser Taste nichts Besonderes.
+- Gibt eine Funktion `false` zurück, gilt die Taste als nicht behandelt; der Browser macht sein Übliches
+  (z. B. Enter oder Leertaste drückt den fokussierten Knopf). Sonst wird die Taste abgefangen.
+- Gedrückt halten löst nur einmal aus. Strg/Alt/Cmd-Kombinationen werden durchgelassen.
+- In Eingabefeldern (`input`, `textarea`, `select`, `contenteditable`) wirken die Tasten nie.
+- Die Funktionen werden bei jedem Tastendruck neu nachgeschlagen: Das Modul kann intern je nach Zustand entscheiden.
+- Keine eigenen `keydown`-Listener am `document` für diese Tasten anmelden, sonst doppelt.
+- **Testseiten**, die ein Modul direkt starten, nutzen `modulRueckgabe(starte(…))` aus `../js/tastatur.js`
+  (liefert `{ aufraeumen, tasten }` für beide Rückgabe-Formen) und bei Bedarf `starteTastatur(() => tasten)`.
 
 ## Regeln
 
@@ -129,6 +173,8 @@ eine Regel `.fertig svg { width: 36px }` hat in einem anderen Modul jedes Bild i
 |---|---|---|
 | Bildercode (`codeeingabe.js`, `css/bildercode.css`) | `code-` | `.code-bild`, `.code-fertig`, `.code-abschluss` |
 | Belohnung (`belohnung.js`, `css/belohnung.css`) | `belohnung` | `.belohnung`, `.belohnung-sterne` |
+| Lehrkraft-Bereich (Passwort-Sperre, Schriftprobe in `app.css`) | `lk-` | `.lk-sperre`, `.lk-schriftprobe` |
+| Hilfsseite Passwort-Hash (`test/passwort-hash.html`) | `ph-` | `.ph-feld`, `.ph-hash` |
 | Blitzlesen | `blitz-` | `.blitz-punkt`, `.blitz-ende` |
 | Leseapparat | `la-` | `.la-apparat`, `.la-bogen` |
 | Rutschen | `rutsch-` | `.rutsch-punkt`, `.rutsch-voll` |

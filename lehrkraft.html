@@ -10,7 +10,21 @@
        Einstellungen stehen nur in der Adresse (URL-Parameter), nichts wird gespeichert. -->
 </head>
 <body>
-  <main class="lehrkraft">
+  <!-- Passwort-Sperre: schützt vor versehentlichem Umstellen durch Kinder, nicht vor Fachleuten
+       (der Code ist öffentlich). Hash und Anleitung: js/passwort.js. Nichts wird gespeichert. -->
+  <main class="lk-sperre" id="sperre">
+    <h1>Lehrkraft-Bereich</h1>
+    <form class="lk-sperre-form" id="sperre-form" autocomplete="off">
+      <label for="passwort">Passwort</label>
+      <div class="zeile">
+        <input class="lk-sperre-feld" id="passwort" type="password" autocomplete="current-password"
+          autocapitalize="off" autocorrect="off" spellcheck="false" required>
+        <button type="submit">Öffnen</button>
+      </div>
+      <p class="leise lk-sperre-meldung" id="sperre-meldung" aria-live="polite"></p>
+    </form>
+  </main>
+  <main class="lehrkraft" id="einstellungen" hidden>
     <h1>Lehrkraft-Bereich</h1>
 
     <h2>Buchstabenstand</h2>
@@ -46,6 +60,21 @@
       An = jeder Durchgang wird neu gemischt, auch bei „Noch einmal“ (kein Auswendiglernen; Rekord je Buchstabenstand).
       Standard: aus.</p>
     <div class="schalter"><button id="teppich-mischen" aria-pressed="false">Silbenteppich bei jedem Durchgang neu mischen</button></div>
+
+    <h2>Vorlesen beim Rutschen und im Leseapparat</h2>
+    <p class="erklaerung">Vorher = die App spricht die Silbe oder das Wort zuerst vor, das Kind liest nach (Vormachen –
+      für Kinder, die das Zusammenziehen noch lernen). Nachher = das Kind liest zuerst selbst, die App spricht danach
+      zur Kontrolle (für Kinder, die schon sicherer sind). Je nach Kind einen eigenen Link erzeugen. Standard: vorher.</p>
+    <div class="schalter" id="vorlesen">
+      <button data-vorlesen="vor">Vorher vorsprechen</button>
+      <button data-vorlesen="nach">Nachher zur Kontrolle</button>
+    </div>
+
+    <h2>Schrift</h2>
+    <p class="erklaerung">Gilt für die ganze App. Andika und die Grundschrift haben ein einstöckiges a (wie in der
+      Fibel-Druckschrift). Standard: Andika.</p>
+    <div class="schalter" id="schriften"></div>
+    <p class="lk-schriftprobe" id="schriftprobe">Mama, Oma, Lama · a g l I · Sofa · Eis</p>
 
     <h2>Sprechtempo der Ersatzstimme</h2>
     <p class="erklaerung">Gilt nur für die Gerätestimme, wenn eine Aufnahme fehlt. Eigene Aufnahmen laufen immer im Originaltempo.</p>
